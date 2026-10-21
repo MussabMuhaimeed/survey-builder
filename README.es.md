@@ -1,4 +1,6 @@
-# Encuestas — creador visual de encuestas (PHP + MySQL)
+# Survey Builder — plataforma visual y bilingüe de encuestas (PHP + MySQL)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Plataforma de encuestas autoalojada y bilingüe (español / inglés). Diseñas encuestas de varios pasos en un editor de arrastrar y soltar, las compartes con enlaces cortos y códigos QR, y analizas los resultados en un panel integrado. Funciona en cualquier hosting **LAMP** estándar: Apache, PHP y MySQL/MariaDB. No necesita compilación ni dependencias de Composer o npm.
 
@@ -80,7 +82,7 @@ Plataforma de encuestas autoalojada y bilingüe (español / inglés). Diseñas e
 
 ### En local
 
-- **XAMPP / MAMP / Laragon:** copia la carpeta en `htdocs` y abre `http://localhost/encuestas/install.php`.
+- **XAMPP / MAMP / Laragon:** copia la carpeta en `htdocs` y abre `http://localhost/survey-builder/install.php`.
 - **Servidor integrado de PHP:** ejecuta `php -S localhost:8000` y **desactiva los enlaces cortos** en el instalador (sin Apache no hay `.htaccess`).
 
 ## Actualizar
@@ -99,3 +101,7 @@ Plataforma de encuestas autoalojada y bilingüe (español / inglés). Diseñas e
 | Horas incorrectas en las encuestas programadas | Ajusta `'timezone'` en `config.php`. |
 
 La documentación técnica completa (arquitectura, reglas para Nginx, estructura del proyecto y seguridad) está en el [README en inglés](README.md).
+
+## Licencia
+
+Publicado con [licencia MIT](LICENSE) — © 2026 Fourmartech. Puedes usarlo, modificarlo y distribuirlo libremente, también con fines comerciales, siempre que mantengas el aviso de copyright.

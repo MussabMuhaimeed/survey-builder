@@ -1,4 +1,6 @@
-# Encuestas — visual survey builder (PHP + MySQL)
+# Survey Builder — visual, bilingual survey platform (PHP + MySQL)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) ![PHP](https://img.shields.io/badge/PHP-7.4%2B-777bb4) ![MySQL](https://img.shields.io/badge/MySQL%20%2F%20MariaDB-supported-00758f)
 
 A self-hosted, bilingual (Spanish / English) survey platform. You design multi-step surveys in a drag-and-drop editor, share them with short links and QR codes, and analyze the results in a built-in dashboard. It runs on any standard **LAMP** hosting: Apache, PHP and MySQL/MariaDB. There is no build step and no Composer or npm dependencies.
 
@@ -20,6 +22,7 @@ A self-hosted, bilingual (Spanish / English) survey platform. You design multi-s
 - [How it works](#how-it-works)
 - [Project structure](#project-structure)
 - [Security notes](#security-notes)
+- [License](#license)
 
 ---
 
@@ -94,7 +97,7 @@ A self-hosted, bilingual (Spanish / English) survey platform. You design multi-s
 
 1. **Get the code.** Download the latest release ZIP, or clone the repository:
    ```bash
-   git clone https://github.com/<your-user>/encuestas.git
+   git clone https://github.com/<your-user>/survey-builder.git
    ```
 2. **Upload it** to the folder your domain or subdomain points to, for example `public_html/` or `public_html/surveys/`.
 3. **Create a MySQL database** and a user with full privileges on it, from your hosting panel. Write down the database name, user and password.
@@ -137,7 +140,7 @@ A self-hosted, bilingual (Spanish / English) survey platform. You design multi-s
 
 ### Option C — Local development
 
-With **XAMPP / MAMP / Laragon**, copy the folder into `htdocs` (or `www`), create an empty database in phpMyAdmin and open `http://localhost/encuestas/install.php`.
+With **XAMPP / MAMP / Laragon**, copy the folder into `htdocs` (or `www`), create an empty database in phpMyAdmin and open `http://localhost/survey-builder/install.php`.
 
 With **PHP's built-in server** (no Apache, so `.htaccess` is ignored):
 
@@ -234,3 +237,9 @@ schema.sql       Database schema
 - IP addresses are only stored as salted SHA-256 hashes.
 - CSV exports are protected against formula injection.
 - `config.php` and `inc/` are denied by `.htaccess`. Delete `install.php` after installing.
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE) — © 2026 Fourmartech. You are free to use, modify and distribute it, including for commercial purposes, as long as the copyright notice is kept.
