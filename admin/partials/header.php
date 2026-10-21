@@ -18,6 +18,9 @@ $uiLang = admin_lang();
 <?= $extraHead ?? '' ?>
 </head>
 <body class="admin <?= e($bodyClass ?? '') ?>">
+<?php if (!empty($GLOBALS['__migration_error']) && $user): ?>
+<div class="alert alert-error migration-alert"><i class="ti ti-database-exclamation"></i> <span><?= e(__('No se pudo actualizar la base de datos: {error}', ['error' => $GLOBALS['__migration_error']])) ?></span></div>
+<?php endif; ?>
 <?php if (empty($noTopbar)): ?>
 <header class="topbar">
   <a class="brand" href="<?= url('admin/index.php') ?>"><span class="brand-mark"><i class="ti ti-chart-donut-3"></i></span><span><?= e(__(config('app_name', 'Encuestas'))) ?></span></a>

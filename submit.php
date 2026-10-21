@@ -178,10 +178,13 @@ $token = bin2hex(random_bytes(16));
 $pdo = db();
 $pdo->beginTransaction();
 try {
-    q('INSERT INTO responses (survey_id, token, ip_hash, user_agent, lang, duration_sec) VALUES (?, ?, ?, ?, ?, ?)', [
-        $s['id'], $token, ip_hash(), mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255), $LANG,
-        max(0, min(86400, (int) ($in['duration'] ?? 0))),
-    ]);
+    $ua = mb_substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
+    $dur = max(0, min(86400, (int) ($in['duration'] ?? 0)));
+    if (has_lang_column()) {
+        q('INSERT INTO responses (survey_id, token, ip_hash, user_agent, lang, duration_sec) VALUES (?, ?, ?, ?, ?, ?)', [$s['id'], $token, ip_hash(), $ua, $LANG, $dur]);
+    } else {
+        q('INSERT INTO responses (survey_id, token, ip_hash, user_agent, duration_sec) VALUES (?, ?, ?, ?, ?)', [$s['id'], $token, ip_hash(), $ua, $dur]);
+    }
     $rid = (int) $pdo->lastInsertId();
     $st = $pdo->prepare('INSERT INTO answers (response_id, survey_id, question_id, value, other_text) VALUES (?, ?, ?, ?, ?)');
     foreach ($rows as [$qid, $val, $oth]) $st->execute([$rid, $s['id'], $qid, $val, $oth]);

@@ -300,6 +300,7 @@
   "No": "No",
   "No hay encuestas que coincidan con la búsqueda.": "No surveys match your search.",
   "No hay respuestas que coincidan.": "No matching responses.",
+  "No se pudo actualizar la base de datos: {error}": "The database could not be updated: {error}",
   "No se pudo crear la carpeta de subidas.": "The uploads folder could not be created.",
   "No se pudo guardar el archivo.": "The file could not be saved.",
   "No se recibió ningún archivo.": "No file was received.",

@@ -13,7 +13,7 @@ function results_load(array $s, ?string $from = null, ?string $to = null): array
     if ($from && preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) { $where .= ' AND r.created_at >= ?'; $p[] = $from . ' 00:00:00'; }
     if ($to && preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) { $where .= ' AND r.created_at <= ?'; $p[] = $to . ' 23:59:59'; }
 
-    $responses = q("SELECT r.id, r.created_at, r.duration_sec, r.lang FROM responses r WHERE $where ORDER BY r.created_at DESC", $p)->fetchAll();
+    $responses = q("SELECT r.id, r.created_at, r.duration_sec, " . (has_lang_column() ? 'r.lang' : 'NULL AS lang') . " FROM responses r WHERE $where ORDER BY r.created_at DESC", $p)->fetchAll();
     $answers = [];
     $st = q("SELECT a.response_id, a.question_id, a.value, a.other_text FROM answers a JOIN responses r ON r.id = a.response_id WHERE $where", $p);
     while ($row = $st->fetch()) {
