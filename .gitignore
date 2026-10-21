@@ -1,0 +1,11 @@
+# Local configuration (DB credentials, secret)
+config.php
+
+# User uploads (keep the folder and its .htaccess)
+uploads/*
+!uploads/.htaccess
+
+# Build artifacts / OS files
+*.zip
+.DS_Store
+Thumbs.db
