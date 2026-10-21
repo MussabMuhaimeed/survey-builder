@@ -1,4 +1,4 @@
-/* Panel: listado de encuestas */
+/* Dashboard: survey list */
 (function () {
   'use strict';
 
@@ -9,7 +9,7 @@
     btn.disabled = true;
     try {
       const fd = new FormData(form);
-      const r = await App.api('create', { title: fd.get('title'), template: fd.get('template') });
+      const r = await App.api('create', { title: fd.get('title'), template: fd.get('template'), lang: fd.get('lang') });
       location.href = 'editor.php?id=' + r.id;
     } catch (err) {
       App.toast(err.message, 'error');
@@ -29,9 +29,9 @@
     }
     if (b.dataset.action === 'delete') {
       const ok = await App.confirm({
-        title: 'Eliminar encuesta',
-        text: `Se eliminará «${b.dataset.title}» junto con todas sus respuestas. Esta acción no se puede deshacer.`,
-        ok: 'Eliminar', danger: true,
+        title: _t('Eliminar encuesta'),
+        text: _t('Se eliminará «{title}» junto con todas sus respuestas. Esta acción no se puede deshacer.', { title: b.dataset.title }),
+        ok: _t('Eliminar'), danger: true,
       });
       if (!ok) return;
       try {
@@ -43,7 +43,7 @@
     }
   });
 
-  /* filtro y búsqueda */
+  /* filter and search */
   const grid = document.getElementById('survey-grid');
   if (!grid) return;
   let status = '';

@@ -24,16 +24,16 @@ function preset_themes(): array
 {
     $t = fn(array $c) => array_merge(THEME_DEFAULTS, $c);
     return [
-        'lavanda'     => $t(['name' => 'Lavanda']),
-        'blanco'      => $t(['name' => 'Blanco limpio', 'accent' => '#111827', 'bg' => '#ffffff', 'border' => '#e5e7eb', 'radius' => 14, 'shadow' => false]),
-        'oceano'      => $t(['name' => 'Océano', 'accent' => '#0284c7', 'bgStyle' => 'gradient', 'bg' => '#e0f2fe', 'bg2' => '#ecfeff', 'text' => '#0f172a', 'muted' => '#5b6b80', 'border' => '#dbe4ee', 'font' => 'Plus Jakarta Sans', 'radius' => 20]),
-        'atardecer'   => $t(['name' => 'Atardecer', 'accent' => '#ea580c', 'bgStyle' => 'gradient', 'bg' => '#ffedd5', 'bg2' => '#fce7f3', 'cardOpacity' => 88, 'text' => '#1c1917', 'muted' => '#78716c', 'border' => '#ebe3dc', 'font' => 'Poppins', 'radius' => 24]),
-        'bosque'      => $t(['name' => 'Bosque', 'accent' => '#15803d', 'bg' => '#ecf7f0', 'text' => '#0f2a1a', 'muted' => '#4b6355', 'border' => '#d3e6da', 'font' => 'DM Sans', 'radius' => 18]),
-        'corporativo' => $t(['name' => 'Corporativo', 'accent' => '#2563eb', 'bg' => '#f3f6fb', 'text' => '#0f172a', 'muted' => '#64748b', 'border' => '#e2e8f0', 'radius' => 10]),
-        'rosa'        => $t(['name' => 'Chicle', 'accent' => '#db2777', 'bgStyle' => 'gradient', 'bg' => '#fdf2f8', 'bg2' => '#ede9fe', 'muted' => '#6f6478', 'border' => '#eadff0', 'font' => 'Poppins', 'radius' => 26]),
-        'papel'       => $t(['name' => 'Papel', 'accent' => '#b45309', 'bg' => '#f5efe6', 'card' => '#fffdf8', 'text' => '#292524', 'muted' => '#78716c', 'border' => '#e7dfd2', 'input' => '#fffdf8', 'font' => 'Lora', 'radius' => 8]),
-        'medianoche'  => $t(['name' => 'Medianoche', 'accent' => '#8b5cf6', 'bg' => '#0e1016', 'card' => '#171a23', 'text' => '#eceef4', 'muted' => '#9aa0b3', 'border' => '#2a2f3d', 'input' => '#1d212c']),
-        'neon'        => $t(['name' => 'Neón', 'accent' => '#22d3ee', 'bgStyle' => 'gradient', 'bg' => '#0b1020', 'bg2' => '#24103d', 'card' => '#121527', 'cardOpacity' => 90, 'text' => '#f1f5f9', 'muted' => '#94a3b8', 'border' => '#2a3150', 'input' => '#181c33', 'font' => 'Space Grotesk', 'radius' => 16]),
+        'lavanda'     => $t(['name' => __('Lavanda')]),
+        'blanco'      => $t(['name' => __('Blanco limpio'), 'accent' => '#111827', 'bg' => '#ffffff', 'border' => '#e5e7eb', 'radius' => 14, 'shadow' => false]),
+        'oceano'      => $t(['name' => __('Océano'), 'accent' => '#0284c7', 'bgStyle' => 'gradient', 'bg' => '#e0f2fe', 'bg2' => '#ecfeff', 'text' => '#0f172a', 'muted' => '#5b6b80', 'border' => '#dbe4ee', 'font' => 'Plus Jakarta Sans', 'radius' => 20]),
+        'atardecer'   => $t(['name' => __('Atardecer'), 'accent' => '#ea580c', 'bgStyle' => 'gradient', 'bg' => '#ffedd5', 'bg2' => '#fce7f3', 'cardOpacity' => 88, 'text' => '#1c1917', 'muted' => '#78716c', 'border' => '#ebe3dc', 'font' => 'Poppins', 'radius' => 24]),
+        'bosque'      => $t(['name' => __('Bosque'), 'accent' => '#15803d', 'bg' => '#ecf7f0', 'text' => '#0f2a1a', 'muted' => '#4b6355', 'border' => '#d3e6da', 'font' => 'DM Sans', 'radius' => 18]),
+        'corporativo' => $t(['name' => __('Corporativo'), 'accent' => '#2563eb', 'bg' => '#f3f6fb', 'text' => '#0f172a', 'muted' => '#64748b', 'border' => '#e2e8f0', 'radius' => 10]),
+        'rosa'        => $t(['name' => __('Chicle'), 'accent' => '#db2777', 'bgStyle' => 'gradient', 'bg' => '#fdf2f8', 'bg2' => '#ede9fe', 'muted' => '#6f6478', 'border' => '#eadff0', 'font' => 'Poppins', 'radius' => 26]),
+        'papel'       => $t(['name' => __('Papel'), 'accent' => '#b45309', 'bg' => '#f5efe6', 'card' => '#fffdf8', 'text' => '#292524', 'muted' => '#78716c', 'border' => '#e7dfd2', 'input' => '#fffdf8', 'font' => 'Lora', 'radius' => 8]),
+        'medianoche'  => $t(['name' => __('Medianoche'), 'accent' => '#8b5cf6', 'bg' => '#0e1016', 'card' => '#171a23', 'text' => '#eceef4', 'muted' => '#9aa0b3', 'border' => '#2a2f3d', 'input' => '#1d212c']),
+        'neon'        => $t(['name' => __('Neón'), 'accent' => '#22d3ee', 'bgStyle' => 'gradient', 'bg' => '#0b1020', 'bg2' => '#24103d', 'card' => '#121527', 'cardOpacity' => 90, 'text' => '#f1f5f9', 'muted' => '#94a3b8', 'border' => '#2a3150', 'input' => '#181c33', 'font' => 'Space Grotesk', 'radius' => 16]),
     ];
 }
 

@@ -1,4 +1,5 @@
 <?php
+// Public survey page: https://domain/XXXXXXXXXX (or s.php?id=XXXXXXXXXX)
 require __DIR__ . '/inc/bootstrap.php';
 
 $uid = (string) ($_GET['id'] ?? '');
@@ -7,12 +8,12 @@ $s = preg_match('/^[a-zA-Z0-9]{4,16}$/', $uid) ? survey_by_uid($uid) : null;
 if (!$s) {
     http_response_code(404);
     $state = 'missing';
-    $def = default_definition('Encuesta no encontrada');
+    $avail = 'missing';
+    $def = default_definition('', browser_lang(array_keys(LANGS), 'es'));
 } else {
     $def = $s['def'];
     $preview = !empty($_GET['preview']) && current_user();
     $avail = survey_availability($s);
-    $st = $def['settings'];
 
     if ($preview) {
         $state = 'open';
@@ -27,35 +28,55 @@ if (!$s) {
             q('UPDATE surveys SET views = views + 1 WHERE id = ?', [$s['id']]);
         }
     }
-
-    $messages = [
-        'draft'       => 'Esta encuesta todavía no está disponible.',
-        'not_started' => 'Esta encuesta aún no ha comenzado. Abre el ' . (!empty($st['startAt']) ? date('d/m/Y \a \l\a\s H:i', strtotime($st['startAt'])) : 'próximamente') . '.',
-        'closed'      => $st['closedMessage'] ?? 'Esta encuesta ya no acepta respuestas.',
-        'ended'       => $st['closedMessage'] ?? 'Esta encuesta ya no acepta respuestas.',
-        'full'        => $st['closedMessage'] ?? 'Esta encuesta ha alcanzado el máximo de respuestas.',
-    ];
 }
 
 $settings = array_merge(default_settings(), $def['settings'] ?? []);
 $theme = theme_config($settings['theme']);
-$title = $s['title'] ?? 'Encuesta no encontrada';
-$desc = $settings['description'] ?: strip_tags((string) ($def['welcome']['text'] ?? ''));
-$ogImage = $def['welcome']['image'] ?? '' ?: ($settings['logo'] ?? '');
+$L = survey_langs($def);
+[$lang, $forcedLang] = participant_lang($def);
+
+// Messages for the non-open states, in every language of the survey
+$messages = [];
+foreach ($L['langs'] as $l) {
+    if ($state === 'missing') {
+        $messages['missing'][$l] = ptext('missing', $l);
+    } elseif ($state === 'done') {
+        $messages['done'][$l] = survey_message($def, 'done', $l);
+    } elseif ($state === 'closed') {
+        if ($avail === 'draft') $text = ptext('draft', $l);
+        elseif ($avail === 'not_started' && !empty($settings['startAt'])) {
+            $ts = strtotime($settings['startAt']);
+            $text = ptext('not_started', $l, ['date' => date($l === 'en' ? 'j M Y' : 'd/m/Y', $ts), 'time' => date('H:i', $ts)]);
+        } elseif ($avail === 'full' && tr_field($settings, 'closedMessage', $l, $L['primary']) === '') $text = ptext('full', $l);
+        else $text = survey_message($def, 'closed', $l);
+        $messages['closed'][$l] = $text;
+    }
+    // Shown if the participant already answered from this browser (checked client-side too)
+    $messages['done'][$l] = $messages['done'][$l] ?? survey_message($def, 'done', $l);
+}
+
+$titles = [];
+foreach ($L['langs'] as $l) $titles[$l] = tr_field($def['welcome'] ?? [], 'title', $l, $L['primary']) ?: ($s['title'] ?? ptext('not_found', $l));
+$title = $titles[$lang];
+$desc = tr_field($settings, 'description', $lang, $L['primary']) ?: strip_tags(tr_field($def['welcome'] ?? [], 'text', $lang, $L['primary']));
+$ogImage = ($def['welcome']['image'] ?? '') ?: ($settings['logo'] ?? '');
 if ($ogImage && !preg_match('#^https?://#', $ogImage)) $ogImage = preg_match('#^uploads/#', $ogImage) ? abs_url($ogImage) : '';
 
 $payload = [
-    'uid'     => $s['uid'] ?? '',
-    'title'   => $title,
-    'state'   => $state,
-    'preview' => !empty($preview),
-    'message' => $state === 'closed' ? ($messages[$avail] ?? $messages['closed']) : ($state === 'done' ? $settings['doneMessage'] : ($state === 'missing' ? 'El enlace no es válido o la encuesta ha sido eliminada.' : '')),
-    'def'     => $state === 'open' ? $def : ['settings' => $settings, 'welcome' => [], 'thanks' => [], 'steps' => []],
-    'theme'   => $theme,
-    'submit'  => url('submit.php'),
+    'uid'        => $s['uid'] ?? '',
+    'title'      => $title,
+    'titles'     => $titles,
+    'state'      => $state,
+    'preview'    => !empty($preview),
+    'messages'   => $messages,
+    'langs'      => ['primary' => $L['primary'], 'langs' => $L['langs'], 'initial' => $lang],
+    'forcedLang' => $forcedLang,
+    'def'        => $state === 'open' ? $def : ['settings' => $settings, 'welcome' => [], 'thanks' => [], 'steps' => []],
+    'theme'      => $theme,
+    'submit'     => url('submit.php'),
 ];
 ?><!doctype html>
-<html lang="es">
+<html lang="<?= e($lang) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -66,6 +87,9 @@ $payload = [
 <meta property="og:description" content="<?= e(mb_substr($desc, 0, 200)) ?>">
 <?php if ($ogImage): ?><meta property="og:image" content="<?= e($ogImage) ?>"><?php endif; ?>
 <?php if (!empty($preview) || $state !== 'open'): ?><meta name="robots" content="noindex"><?php endif; ?>
+<?php if ($L['bilingual'] && $s): foreach ($L['langs'] as $l): ?>
+<link rel="alternate" hreflang="<?= e($l) ?>" href="<?= e(survey_url($s['uid'])) ?><?= config('pretty_urls') ? '?' : '&' ?>lang=<?= e($l) ?>">
+<?php endforeach; endif; ?>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="<?= e(font_link($theme['font'])) ?>">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
@@ -75,17 +99,18 @@ $payload = [
 <div class="sv-root" id="sv">
   <div class="sv-progress" hidden><div class="sv-progress-bar"></div></div>
   <?php if (!empty($preview)): ?>
-    <div class="sv-preview-banner"><i class="ti ti-eye"></i> Vista previa · las respuestas no se guardarán</div>
+    <div class="sv-preview-banner"><i class="ti ti-eye"></i> <?= e(ptext('preview', $lang)) ?></div>
   <?php endif; ?>
   <main class="sv-shell">
     <header class="sv-header" id="sv-header"></header>
     <section class="sv-card" id="sv-card" aria-live="polite">
-      <noscript><p>Necesitas activar JavaScript para responder esta encuesta.</p></noscript>
+      <noscript><p><?= e(ptext('noscript', $lang)) ?></p></noscript>
     </section>
   </main>
 </div>
 <script>window.APP = { base: <?= json_for_script(base_path()) ?> }; window.SURVEY = <?= json_for_script($payload) ?>;</script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script src="<?= url('assets/js/i18n.js') ?>?v=<?= APP_VERSION ?>"></script>
 <script src="<?= url('assets/js/blocks.js') ?>?v=<?= APP_VERSION ?>"></script>
 <script src="<?= url('assets/js/survey.js') ?>?v=<?= APP_VERSION ?>"></script>
 </body>

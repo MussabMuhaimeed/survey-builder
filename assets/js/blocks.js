@@ -1,10 +1,10 @@
-/* Renderizador compartido de bloques (editor + encuesta pública) */
+/* Shared block renderer (editor canvas + public survey). Requires i18n.js */
 (function () {
   'use strict';
   const SV = (window.SV = window.SV || {});
   SV.base = (window.APP && window.APP.base) || '';
 
-  /* ---------- utilidades ---------- */
+  /* ---------- utilities ---------- */
   SV.uid = (p = 'b') => p + '_' + Math.random().toString(36).slice(2, 10);
   SV.esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   SV.asset = (u) => {
@@ -44,39 +44,47 @@
 
   const opt = (label, extra) => Object.assign({ id: SV.uid('o'), label }, extra || {});
   const q = (title, extra) => Object.assign({ title, description: '', required: false }, extra || {});
+  const opts = (L, es, en, n) => Array.from({ length: n }, (_, i) => opt(L(es, en) + ' ' + (i + 1)));
   SV.opt = opt;
 
-  /* ---------- catálogo ---------- */
+  /* ---------- catalog ----------
+   * label: palette name (admin language) · make(L): defaults in the survey's language,
+   * where L('es text', 'en text') picks the right one.
+   */
   SV.catalog = {
-    heading:   { group: 'content', label: 'Título', icon: 'ti-heading', make: () => ({ text: 'Título de la sección', size: 'h2', align: 'left' }) },
-    paragraph: { group: 'content', label: 'Texto', icon: 'ti-align-left', make: () => ({ text: 'Escribe aquí tu texto. Puedes usar **negrita**, *cursiva* y [enlaces](https://ejemplo.com).', align: 'left' }) },
-    image:     { group: 'content', label: 'Imagen', icon: 'ti-photo', make: () => ({ src: '', alt: '', caption: '', width: 'full', rounded: true }) },
-    video:     { group: 'content', label: 'Vídeo', icon: 'ti-brand-youtube', make: () => ({ url: '', caption: '' }) },
-    logos:     { group: 'content', label: 'Logos', icon: 'ti-award', make: () => ({ title: '', items: [], size: 'md', grayscale: false }) },
-    divider:   { group: 'content', label: 'Separador', icon: 'ti-separator', make: () => ({}) },
-    spacer:    { group: 'content', label: 'Espacio', icon: 'ti-arrows-vertical', make: () => ({ height: 32 }) },
+    heading:   { group: 'content', label: _t('Título'), icon: 'ti-heading', make: (L) => ({ text: L('Título de la sección', 'Section title'), size: 'h2', align: 'left' }) },
+    paragraph: { group: 'content', label: _t('Texto'), icon: 'ti-align-left', make: (L) => ({ text: L('Escribe aquí tu texto. Puedes usar **negrita**, *cursiva* y [enlaces](https://ejemplo.com).', 'Write your text here. You can use **bold**, *italics* and [links](https://example.com).'), align: 'left' }) },
+    image:     { group: 'content', label: _t('Imagen'), icon: 'ti-photo', make: () => ({ src: '', alt: '', caption: '', width: 'full', rounded: true }) },
+    video:     { group: 'content', label: _t('Vídeo'), icon: 'ti-brand-youtube', make: () => ({ url: '', caption: '' }) },
+    logos:     { group: 'content', label: _t('Logos'), icon: 'ti-award', make: () => ({ title: '', items: [], size: 'md', grayscale: false }) },
+    divider:   { group: 'content', label: _t('Separador'), icon: 'ti-separator', make: () => ({}) },
+    spacer:    { group: 'content', label: _t('Espacio'), icon: 'ti-arrows-vertical', make: () => ({ height: 32 }) },
 
-    single_choice:   { group: 'question', label: 'Opción única', icon: 'ti-circle-dot', make: () => q('Elige una opción', { options: [opt('Opción 1'), opt('Opción 2'), opt('Opción 3')], allowOther: false, otherLabel: 'Otro', layout: 'list' }) },
-    multiple_choice: { group: 'question', label: 'Opción múltiple', icon: 'ti-checkbox', make: () => q('Selecciona una o varias opciones', { options: [opt('Opción 1'), opt('Opción 2'), opt('Opción 3')], allowOther: false, otherLabel: 'Otro', minSelect: 0, maxSelect: 0, layout: 'list' }) },
-    image_choice:    { group: 'question', label: 'Imágenes / logos', icon: 'ti-layout-grid', make: () => q('¿Cuál prefieres?', { options: [opt('Opción A', { image: '' }), opt('Opción B', { image: '' }), opt('Opción C', { image: '' })], multiple: false, minSelect: 0, maxSelect: 0, columns: 3, showLabels: true, fit: 'contain' }) },
-    dropdown:        { group: 'question', label: 'Desplegable', icon: 'ti-selector', make: () => q('Elige de la lista', { options: [opt('Opción 1'), opt('Opción 2'), opt('Opción 3')], placeholder: 'Selecciona…' }) },
-    yes_no:          { group: 'question', label: 'Sí / No', icon: 'ti-thumb-up', make: () => q('¿Responderías que sí?', { yesLabel: 'Sí', noLabel: 'No' }) },
-    rating:          { group: 'question', label: 'Valoración', icon: 'ti-star', make: () => q('Valora tu experiencia', { max: 5, icon: 'star' }) },
-    scale:           { group: 'question', label: 'Escala lineal', icon: 'ti-adjustments-horizontal', make: () => q('En una escala del 1 al 5…', { min: 1, max: 5, minLabel: 'Nada', maxLabel: 'Mucho' }) },
-    nps:             { group: 'question', label: 'NPS (0-10)', icon: 'ti-gauge', make: () => q('¿Qué probabilidad hay de que nos recomiendes?', { minLabel: 'Nada probable', maxLabel: 'Muy probable' }) },
-    slider:          { group: 'question', label: 'Deslizador', icon: 'ti-adjustments', make: () => q('Mueve el control', { min: 0, max: 100, step: 1, unit: '' }) },
-    ranking:         { group: 'question', label: 'Ranking', icon: 'ti-arrows-sort', make: () => q('Ordena por preferencia', { options: [opt('Elemento 1'), opt('Elemento 2'), opt('Elemento 3')] }) },
-    matrix:          { group: 'question', label: 'Matriz', icon: 'ti-table', make: () => q('Valora cada aspecto', { rows: [opt('Aspecto 1'), opt('Aspecto 2'), opt('Aspecto 3')], columns: [opt('Malo'), opt('Regular'), opt('Bueno'), opt('Excelente')] }) },
-    short_text:      { group: 'question', label: 'Texto corto', icon: 'ti-forms', make: () => q('Pregunta de respuesta corta', { placeholder: 'Escribe tu respuesta' }) },
-    long_text:       { group: 'question', label: 'Texto largo', icon: 'ti-align-justified', make: () => q('Pregunta abierta', { placeholder: 'Escribe tu respuesta…', maxLength: 0 }) },
-    email:           { group: 'question', label: 'Email', icon: 'ti-mail', make: () => q('¿Cuál es tu email?', { placeholder: 'nombre@ejemplo.com' }) },
-    number:          { group: 'question', label: 'Número', icon: 'ti-123', make: () => q('Introduce un número', { placeholder: '0', min: '', max: '' }) },
-    date:            { group: 'question', label: 'Fecha', icon: 'ti-calendar', make: () => q('Selecciona una fecha', {}) },
+    single_choice:   { group: 'question', label: _t('Opción única'), icon: 'ti-circle-dot', make: (L) => q(L('Elige una opción', 'Choose an option'), { options: opts(L, 'Opción', 'Option', 3), allowOther: false, otherLabel: L('Otro', 'Other'), layout: 'list' }) },
+    multiple_choice: { group: 'question', label: _t('Opción múltiple'), icon: 'ti-checkbox', make: (L) => q(L('Selecciona una o varias opciones', 'Select one or more options'), { options: opts(L, 'Opción', 'Option', 3), allowOther: false, otherLabel: L('Otro', 'Other'), minSelect: 0, maxSelect: 0, layout: 'list' }) },
+    image_choice:    { group: 'question', label: _t('Imágenes / logos'), icon: 'ti-layout-grid', make: (L) => q(L('¿Cuál prefieres?', 'Which one do you prefer?'), { options: ['A', 'B', 'C'].map((x) => opt(L('Opción ', 'Option ') + x, { image: '' })), multiple: false, minSelect: 0, maxSelect: 0, columns: 3, showLabels: true, fit: 'contain' }) },
+    dropdown:        { group: 'question', label: _t('Desplegable'), icon: 'ti-selector', make: (L) => q(L('Elige de la lista', 'Choose from the list'), { options: opts(L, 'Opción', 'Option', 3), placeholder: L('Selecciona…', 'Select…') }) },
+    yes_no:          { group: 'question', label: _t('Sí / No'), icon: 'ti-thumb-up', make: (L) => q(L('¿Responderías que sí?', 'Would you say yes?'), { yesLabel: L('Sí', 'Yes'), noLabel: L('No', 'No') }) },
+    rating:          { group: 'question', label: _t('Valoración'), icon: 'ti-star', make: (L) => q(L('Valora tu experiencia', 'Rate your experience'), { max: 5, icon: 'star' }) },
+    scale:           { group: 'question', label: _t('Escala lineal'), icon: 'ti-adjustments-horizontal', make: (L) => q(L('En una escala del 1 al 5…', 'On a scale from 1 to 5…'), { min: 1, max: 5, minLabel: L('Nada', 'Not at all'), maxLabel: L('Mucho', 'Very much') }) },
+    nps:             { group: 'question', label: _t('NPS (0-10)'), icon: 'ti-gauge', make: (L) => q(L('¿Qué probabilidad hay de que nos recomiendes?', 'How likely are you to recommend us?'), { minLabel: L('Nada probable', 'Not at all likely'), maxLabel: L('Muy probable', 'Extremely likely') }) },
+    slider:          { group: 'question', label: _t('Deslizador'), icon: 'ti-adjustments', make: (L) => q(L('Mueve el control', 'Move the slider'), { min: 0, max: 100, step: 1, unit: '' }) },
+    ranking:         { group: 'question', label: _t('Ranking'), icon: 'ti-arrows-sort', make: (L) => q(L('Ordena por preferencia', 'Sort by preference'), { options: opts(L, 'Elemento', 'Item', 3) }) },
+    matrix:          { group: 'question', label: _t('Matriz'), icon: 'ti-table', make: (L) => q(L('Valora cada aspecto', 'Rate each aspect'), { rows: opts(L, 'Aspecto', 'Aspect', 3), columns: [L('Malo', 'Poor'), L('Regular', 'Fair'), L('Bueno', 'Good'), L('Excelente', 'Excellent')].map((l) => opt(l)) }) },
+    short_text:      { group: 'question', label: _t('Texto corto'), icon: 'ti-forms', make: (L) => q(L('Pregunta de respuesta corta', 'Short answer question'), { placeholder: L('Escribe tu respuesta', 'Type your answer') }) },
+    long_text:       { group: 'question', label: _t('Texto largo'), icon: 'ti-align-justified', make: (L) => q(L('Pregunta abierta', 'Open question'), { placeholder: L('Escribe tu respuesta…', 'Type your answer…'), maxLength: 0 }) },
+    email:           { group: 'question', label: _t('Email'), icon: 'ti-mail', make: (L) => q(L('¿Cuál es tu email?', 'What is your email?'), { placeholder: L('nombre@ejemplo.com', 'name@example.com') }) },
+    number:          { group: 'question', label: _t('Número'), icon: 'ti-123', make: (L) => q(L('Introduce un número', 'Enter a number'), { placeholder: '0', min: '', max: '' }) },
+    date:            { group: 'question', label: _t('Fecha'), icon: 'ti-calendar', make: (L) => q(L('Selecciona una fecha', 'Pick a date'), {}) },
   };
   SV.isQuestion = (t) => !!(SV.catalog[t] && SV.catalog[t].group === 'question');
-  SV.newBlock = (type) => Object.assign({ id: SV.uid(SV.isQuestion(type) ? 'q' : 'b'), type }, SV.catalog[type].make());
+  /** New block with default texts in `lang` (the survey's primary language) */
+  SV.newBlock = (type, lang) => {
+    const L = (es, en) => (lang === 'en' ? en : es);
+    return Object.assign({ id: SV.uid(SV.isQuestion(type) ? 'q' : 'b'), type }, SV.catalog[type].make(L));
+  };
 
-  /* ---------- tema ---------- */
+  /* ---------- theme ---------- */
   function luminance(hex) {
     const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
     if (!m) return 0.2;
@@ -94,7 +102,7 @@
     font: 'Inter', radius: 22, shadow: true,
   };
   const hex = (v, d) => (/^#[0-9a-f]{6}$/i.test(v || '') ? v : d);
-  /** Aplica un tema (configuración completa) a un contenedor .sv-root */
+  /** Applies a full theme config to a .sv-root container */
   SV.applyTheme = function (root, theme) {
     const t = Object.assign({}, SV.themeDefaults, theme || {});
     const D = SV.themeDefaults;
@@ -134,7 +142,7 @@
   };
   SV.fonts = ['Inter', 'Poppins', 'DM Sans', 'Plus Jakarta Sans', 'Space Grotesk', 'Playfair Display', 'Lora'];
 
-  /* ---------- vídeo ---------- */
+  /* ---------- video ---------- */
   SV.videoEmbed = function (url) {
     url = (url || '').trim();
     let m;
@@ -146,7 +154,7 @@
     return null;
   };
 
-  /* ---------- bloques de contenido ---------- */
+  /* ---------- content blocks ---------- */
   function placeholder(icon, text) {
     return h('div', { class: 'sv-placeholder' }, h('i', { class: 'ti ' + icon }), h('span', null, text));
   }
@@ -160,22 +168,22 @@
       return h('div', { class: 'sv-text', style: { textAlign: b.align || 'left' }, html: SV.fmt(b.text || '') });
     },
     image(b, edit) {
-      if (!b.src) return edit ? placeholder('ti-photo', 'Añade una imagen desde el panel de propiedades') : null;
+      if (!b.src) return edit ? placeholder('ti-photo', _t('Añade una imagen desde el panel de propiedades')) : null;
       return h('figure', { class: 'sv-figure w-' + (b.width || 'full') + (b.rounded !== false ? ' is-rounded' : '') },
         h('img', { src: SV.asset(b.src), alt: b.alt || '', loading: 'lazy' }),
         b.caption ? h('figcaption', null, b.caption) : null);
     },
     video(b, edit) {
       const v = SV.videoEmbed(b.url);
-      if (!v) return edit ? placeholder('ti-brand-youtube', 'Pega un enlace de YouTube o Vimeo, o sube un MP4') : null;
+      if (!v) return edit ? placeholder('ti-brand-youtube', _t('Pega un enlace de YouTube o Vimeo, o sube un MP4')) : null;
       const media = v.kind === 'iframe'
-        ? h('iframe', { src: v.src, allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture', allowfullscreen: true, loading: 'lazy', title: b.caption || 'Vídeo' })
+        ? h('iframe', { src: v.src, allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture', allowfullscreen: true, loading: 'lazy', title: b.caption || SV.t('video') })
         : h('video', { src: v.src, controls: true, playsinline: true, preload: 'metadata' });
       return h('figure', { class: 'sv-video' }, h('div', { class: 'sv-video-frame' }, media), b.caption ? h('figcaption', null, b.caption) : null);
     },
     logos(b, edit) {
       const items = (b.items || []).filter((i) => i.src);
-      if (!items.length) return edit ? placeholder('ti-award', 'Añade logos desde el panel de propiedades') : null;
+      if (!items.length) return edit ? placeholder('ti-award', _t('Añade logos desde el panel de propiedades')) : null;
       return h('div', { class: 'sv-logos size-' + (b.size || 'md') + (b.grayscale ? ' is-gray' : '') },
         b.title ? h('div', { class: 'sv-logos-title' }, b.title) : null,
         h('div', { class: 'sv-logos-row' }, items.map((i) => {
@@ -187,7 +195,7 @@
     spacer(b) { return h('div', { class: 'sv-spacer', style: { height: Math.max(4, Math.min(200, +b.height || 32)) + 'px' } }); },
   };
 
-  /* ---------- preguntas ---------- */
+  /* ---------- questions ---------- */
   function textInput(b, st, set, type) {
     const inp = h('input', { class: 'sv-input', type, placeholder: b.placeholder || '', value: st.value == null ? '' : st.value });
     if (type === 'number') {
@@ -206,8 +214,8 @@
     let other = st.other || '';
     const max = multi ? +b.maxSelect || 0 : 1;
     const items = (b.options || []).slice();
-    if (b.allowOther) items.push({ id: '__other__', label: b.otherLabel || 'Otro' });
-    const otherInput = h('input', { class: 'sv-input sv-other-input', placeholder: 'Especifica tu respuesta…', value: other });
+    if (b.allowOther) items.push({ id: '__other__', label: b.otherLabel || SV.t('other') });
+    const otherInput = h('input', { class: 'sv-input sv-other-input', placeholder: SV.t('otherPh'), value: other });
     const isOn = (id) => (multi ? sel.includes(id) : sel === id);
     function refresh() {
       wrap.querySelectorAll('.sv-choice').forEach((el) => {
@@ -246,7 +254,7 @@
       set(multi ? sel.slice() : sel, other);
     });
     wrap.append(otherInput);
-    if (multi && max > 0) wrap.append(h('div', { class: 'sv-hint' }, `Puedes elegir hasta ${max}`));
+    if (multi && max > 0) wrap.append(h('div', { class: 'sv-hint' }, SV.t('upTo', { n: max })));
     refresh();
     return wrap;
   }
@@ -278,7 +286,7 @@
     multiple_choice: (b, st, set) => choices(b, st, set, true),
     dropdown(b, st, set) {
       const s = h('select', { class: 'sv-input sv-select' },
-        h('option', { value: '' }, b.placeholder || 'Selecciona…'),
+        h('option', { value: '' }, b.placeholder || SV.t('select')),
         (b.options || []).map((o) => h('option', { value: o.id }, o.label)));
       s.value = st.value || '';
       s.addEventListener('change', () => set(s.value || null));
@@ -286,7 +294,7 @@
     },
     yes_no(b, st, set) {
       const wrap = h('div', { class: 'sv-yesno', role: 'radiogroup' });
-      [['yes', b.yesLabel || 'Sí', 'ti-thumb-up'], ['no', b.noLabel || 'No', 'ti-thumb-down']].forEach(([id, label, icon]) => {
+      [['yes', b.yesLabel || SV.t('yes'), 'ti-thumb-up'], ['no', b.noLabel || SV.t('no'), 'ti-thumb-down']].forEach(([id, label, icon]) => {
         const btn = h('button', { type: 'button', class: 'sv-yn' + (st.value === id ? ' is-on' : ''), role: 'radio', 'data-id': id }, h('i', { class: 'ti ' + icon }), h('span', null, label));
         btn.addEventListener('click', () => {
           wrap.querySelectorAll('.sv-yn').forEach((x) => x.classList.toggle('is-on', x === btn));
@@ -335,7 +343,7 @@
         grid.append(card);
       });
       refresh();
-      const hint = multi ? (max > 0 ? `Puedes elegir hasta ${max}` : 'Puedes elegir varias opciones') : '';
+      const hint = multi ? (max > 0 ? SV.t('upTo', { n: max }) : SV.t('multi')) : '';
       return h('div', null, grid, hint ? h('div', { class: 'sv-hint' }, hint) : null);
     },
     rating(b, st, set) {
@@ -349,7 +357,7 @@
         el.classList.toggle('is-on', emoji ? i + 1 === n : i < n);
       });
       for (let i = 1; i <= max; i++) {
-        const btn = h('button', { type: 'button', class: 'sv-rate', role: 'radio', 'aria-label': `${i} de ${max}` }, h('i', { class: 'ti ' + (emoji ? faces[i - 1] : icon) }));
+        const btn = h('button', { type: 'button', class: 'sv-rate', role: 'radio', 'aria-label': SV.t('ofMax', { i, max }) }, h('i', { class: 'ti ' + (emoji ? faces[i - 1] : icon) }));
         btn.addEventListener('click', () => { val = i; paint(val); set(i); });
         btn.addEventListener('mouseenter', () => paint(i));
         wrap.append(btn);
@@ -370,7 +378,7 @@
       const step = +b.step > 0 ? +b.step : 1;
       const touched = st.value != null && st.value !== '';
       const r = h('input', { type: 'range', class: 'sv-range', min, max, step, value: touched ? st.value : (min + max) / 2 });
-      const out = h('div', { class: 'sv-range-value' + (touched ? '' : ' is-empty') }, touched ? `${st.value}${b.unit ? ' ' + b.unit : ''}` : 'Mueve el control');
+      const out = h('div', { class: 'sv-range-value' + (touched ? '' : ' is-empty') }, touched ? `${st.value}${b.unit ? ' ' + b.unit : ''}` : SV.t('slider'));
       const fill = () => r.style.setProperty('--p', ((r.value - min) / (max - min)) * 100 + '%');
       r.addEventListener('input', () => {
         out.textContent = `${r.value}${b.unit ? ' ' + b.unit : ''}`;
@@ -407,15 +415,15 @@
           h('span', { class: 'sv-rank-pos' }),
           h('span', { class: 'sv-rank-label' }, byId[id].label),
           h('span', { class: 'sv-rank-btns' },
-            h('button', { type: 'button', 'aria-label': 'Subir', onclick: () => move(li, -1) }, h('i', { class: 'ti ti-chevron-up' })),
-            h('button', { type: 'button', 'aria-label': 'Bajar', onclick: () => move(li, 1) }, h('i', { class: 'ti ti-chevron-down' }))));
+            h('button', { type: 'button', 'aria-label': SV.t('up'), onclick: () => move(li, -1) }, h('i', { class: 'ti ti-chevron-up' })),
+            h('button', { type: 'button', 'aria-label': SV.t('down'), onclick: () => move(li, 1) }, h('i', { class: 'ti ti-chevron-down' }))));
         list.append(li);
       });
       renumber();
       if (window.Sortable) {
         window.Sortable.create(list, { handle: '.sv-rank-handle', animation: 180, ghostClass: 'is-ghost', onEnd: commit });
       }
-      return h('div', null, list, h('div', { class: 'sv-hint' }, 'Arrastra o usa las flechas para ordenar'));
+      return h('div', null, list, h('div', { class: 'sv-hint' }, SV.t('rankHint')));
     },
     matrix(b, st, set) {
       const val = st.value && typeof st.value === 'object' && !Array.isArray(st.value) ? Object.assign({}, st.value) : {};
@@ -451,7 +459,7 @@
     return h('div', null, wrap, (b.minLabel || b.maxLabel) ? h('div', { class: 'sv-scale-labels' }, h('span', null, b.minLabel || ''), h('span', null, b.maxLabel || '')) : null);
   }
 
-  /* ---------- render principal ---------- */
+  /* ---------- main render ---------- */
   /**
    * ctx: { mode: 'edit'|'live', number, state: {value, other}, onChange(value, other) }
    */
@@ -475,13 +483,13 @@
       h('div', { class: 'sv-q-head' },
         ctx.number ? h('span', { class: 'sv-q-num' }, ctx.number) : null,
         h('div', { class: 'sv-q-titles' },
-          h('h3', { class: 'sv-q-title', id: 'qt_' + b.id }, b.title || 'Pregunta sin título', b.required ? h('span', { class: 'sv-req', title: 'Obligatoria' }, ' *') : null),
+          h('h3', { class: 'sv-q-title', id: 'qt_' + b.id }, b.title || SV.t('untitled'), b.required ? h('span', { class: 'sv-req', title: SV.t('requiredMark') }, ' *') : null),
           b.description ? h('p', { class: 'sv-q-desc', html: SV.fmt(b.description) }) : null)),
       h('div', { class: 'sv-q-body' }, body),
       h('div', { class: 'sv-q-error', role: 'alert' }));
   };
 
-  /* ---------- validación ---------- */
+  /* ---------- validation ---------- */
   SV.isEmpty = (b, v) => v == null || v === '' || (Array.isArray(v) && !v.length) ||
     (b.type === 'matrix' && typeof v === 'object' && !Object.keys(v).length);
 
@@ -489,27 +497,27 @@
     const v = st ? st.value : null;
     if (SV.isEmpty(b, v)) {
       if (!b.required) return '';
-      return b.type === 'ranking' ? 'Ordena los elementos (arrastra o usa las flechas).' : 'Esta pregunta es obligatoria.';
+      return SV.t(b.type === 'ranking' ? 'rankingRequired' : 'required');
     }
     switch (b.type) {
       case 'email':
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v).trim())) return 'Introduce un email válido.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(v).trim())) return SV.t('email');
         break;
       case 'number':
-        if (isNaN(v)) return 'Introduce un número válido.';
-        if (b.min !== '' && b.min != null && v < +b.min) return `El valor mínimo es ${b.min}.`;
-        if (b.max !== '' && b.max != null && v > +b.max) return `El valor máximo es ${b.max}.`;
+        if (isNaN(v)) return SV.t('number');
+        if (b.min !== '' && b.min != null && v < +b.min) return SV.t('min', { n: b.min });
+        if (b.max !== '' && b.max != null && v > +b.max) return SV.t('max', { n: b.max });
         break;
       case 'multiple_choice':
       case 'image_choice':
-        if (Array.isArray(v) && +b.minSelect > 0 && v.length < +b.minSelect) return `Selecciona al menos ${b.minSelect} opciones.`;
+        if (Array.isArray(v) && +b.minSelect > 0 && v.length < +b.minSelect) return SV.t('minSelect', { n: b.minSelect });
         break;
       case 'matrix':
-        if (b.required && (b.rows || []).some((r) => !v[r.id])) return 'Responde todas las filas.';
+        if (b.required && (b.rows || []).some((r) => !v[r.id])) return SV.t('matrixAll');
         break;
     }
     const hasOther = v === '__other__' || (Array.isArray(v) && v.includes('__other__'));
-    if (hasOther && !String(st.other || '').trim()) return 'Especifica tu respuesta en «' + (b.otherLabel || 'Otro') + '».';
+    if (hasOther && !String(st.other || '').trim()) return SV.t('otherSpecify', { label: b.otherLabel || SV.t('other') });
     return '';
   };
 })();

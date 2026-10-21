@@ -1,4 +1,4 @@
-/* Página de gestión de temas */
+/* Themes management page */
 (function () {
   'use strict';
   const h = SV.h;
@@ -8,14 +8,14 @@
   let draft = null; // { id, config }
 
   function card(t) {
-    const usage = t.usage ? `Usado en ${t.usage} encuesta${t.usage === 1 ? '' : 's'}` : 'Sin usar';
+    const usage = t.usage ? _t(t.usage === 1 ? 'Usado en {n} encuesta' : 'Usado en {n} encuestas', { n: t.usage }) : _t('Sin usar');
     const actions = t.custom
       ? [
-        h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => open(t.id, t.config) }, h('i', { class: 'ti ti-pencil' }), 'Editar'),
-        h('button', { type: 'button', class: 'icon-btn', title: 'Duplicar', onclick: () => open(null, Object.assign({}, t.config, { name: t.name + ' (copia)' })) }, h('i', { class: 'ti ti-copy' })),
-        h('button', { type: 'button', class: 'icon-btn danger', title: 'Eliminar', onclick: () => remove(t) }, h('i', { class: 'ti ti-trash' })),
+        h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => open(t.id, t.config) }, h('i', { class: 'ti ti-pencil' }), _t('Editar')),
+        h('button', { type: 'button', class: 'icon-btn', title: _t('Duplicar'), onclick: () => open(null, Object.assign({}, t.config, { name: t.name + ' ' + _t('(copia)') })) }, h('i', { class: 'ti ti-copy' })),
+        h('button', { type: 'button', class: 'icon-btn danger', title: _t('Eliminar'), onclick: () => remove(t) }, h('i', { class: 'ti ti-trash' })),
       ]
-      : [h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => open(null, Object.assign({}, t.config, { name: t.name + ' (personalizado)' })) }, h('i', { class: 'ti ti-adjustments-horizontal' }), 'Personalizar')];
+      : [h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => open(null, Object.assign({}, t.config, { name: t.name + ' ' + _t('(personalizado)') })) }, h('i', { class: 'ti ti-adjustments-horizontal' }), _t('Personalizar'))];
     const swatches = h('div', { class: 'theme-swatches' }, ['accent', 'bg', 'card', 'text'].map((k) => h('span', { style: { background: t.config[k] }, title: k })));
     return h('article', { class: 'theme-card' },
       SV.themeThumb(t.config),
@@ -38,7 +38,7 @@
 
   function open(id, config) {
     draft = { id, config: Object.assign({}, T.defaults, config) };
-    document.getElementById('studio-title').textContent = id ? 'Editar tema' : 'Nuevo tema';
+    document.getElementById('studio-title').textContent = id ? _t('Editar tema') : _t('Nuevo tema');
     const form = document.getElementById('studio-form');
     form.replaceChildren(SV.themeForm(draft.config, preview));
     canvas.replaceChildren(SV.themeSample());
@@ -57,24 +57,24 @@
 
   async function save() {
     if (!draft) return;
-    if (!String(draft.config.name || '').trim()) return App.toast('Ponle un nombre al tema', 'error');
+    if (!String(draft.config.name || '').trim()) return App.toast(_t('Ponle un nombre al tema'), 'error');
     const t = T.list.find((x) => x.custom && x.id === draft.id);
     if (t && t.usage > 0) {
-      const ok = await App.confirm({ title: 'Actualizar tema', text: `Los cambios se aplicarán a las ${t.usage} encuesta(s) que usan «${t.name}».`, ok: 'Guardar cambios' });
+      const ok = await App.confirm({ title: _t('Actualizar tema'), text: _t('Los cambios se aplicarán a las {n} encuesta(s) que usan «{name}».', { n: t.usage, name: t.name }), ok: _t('Guardar cambios') });
       if (!ok) return;
     }
     try {
       await App.api('theme_save', { id: draft.id || 0, config: draft.config });
-      App.toast('Tema guardado');
+      App.toast(_t('Tema guardado'));
       setTimeout(() => location.reload(), 400);
     } catch (e) { App.toast(e.message, 'error'); }
   }
 
   async function remove(t) {
     const ok = await App.confirm({
-      title: 'Eliminar tema',
-      text: t.usage ? `«${t.name}» se usa en ${t.usage} encuesta(s); pasarán a usar el tema por defecto.` : `Se eliminará «${t.name}».`,
-      ok: 'Eliminar', danger: true,
+      title: _t('Eliminar tema'),
+      text: t.usage ? _t('«{name}» se usa en {n} encuesta(s); pasarán a usar el tema por defecto.', { name: t.name, n: t.usage }) : _t('Se eliminará «{name}».', { name: t.name }),
+      ok: _t('Eliminar'), danger: true,
     });
     if (!ok) return;
     try {
@@ -85,7 +85,7 @@
 
   document.querySelector('[data-theme-new]').addEventListener('click', () => {
     const accent = '#5b4cf0';
-    open(null, Object.assign({}, T.defaults, SV.autoPalette(accent, false), { accent, name: 'Mi tema' }));
+    open(null, Object.assign({}, T.defaults, SV.autoPalette(accent, false), { accent, name: _t('Mi tema') }));
   });
   studio.addEventListener('click', (e) => { if (e.target.closest('[data-studio-close]')) close(); });
   document.getElementById('studio-save').addEventListener('click', save);

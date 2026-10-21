@@ -1,4 +1,4 @@
-# Las subidas solo pueden ser imágenes y vídeos: nunca se ejecuta código aquí
+# Uploads can only be images and videos: code is never executed here
 Options -Indexes -ExecCGI
 <IfModule mod_php.c>
   php_flag engine off
@@ -13,3 +13,8 @@ Options -Indexes -ExecCGI
   Header set Content-Security-Policy "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'"
   Header set X-Content-Type-Options "nosniff"
 </IfModule>
+
+# Internal flags (e.g. .schema-version)
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>

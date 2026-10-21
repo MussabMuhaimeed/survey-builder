@@ -1,4 +1,4 @@
-/* Componentes de temas: miniaturas y formulario de edición (editor + página de temas) */
+/* Theme components: thumbnails and edit form (editor + themes page) */
 (function () {
   'use strict';
   const h = SV.h;
@@ -82,17 +82,17 @@
     const warn = h('div', { class: 'alert alert-warn hidden' });
     function checkContrast() {
       const issues = [];
-      if (contrast(theme.text, theme.card) < 4.5) issues.push('el texto sobre la tarjeta');
-      if (contrast(theme.muted, theme.card) < 3) issues.push('el texto secundario');
-      if (contrast(theme.accent, theme.card) < 2.2) issues.push('el color principal sobre la tarjeta');
+      if (contrast(theme.text, theme.card) < 4.5) issues.push(_t('el texto sobre la tarjeta'));
+      if (contrast(theme.muted, theme.card) < 3) issues.push(_t('el texto secundario'));
+      if (contrast(theme.accent, theme.card) < 2.2) issues.push(_t('el color principal sobre la tarjeta'));
       warn.classList.toggle('hidden', !issues.length);
       warn.innerHTML = '<i class="ti ti-contrast-2"></i><span></span>';
-      warn.querySelector('span').textContent = 'Contraste bajo en ' + issues.join(', ') + '. Puede costar leerlo.';
+      warn.querySelector('span').textContent = _t('Contraste bajo en {list}. Puede costar leerlo.', { list: issues.join(', ') });
     }
 
     function paint() {
       root.innerHTML = '';
-      const name = h('input', { type: 'text', maxlength: 120, placeholder: 'Mi tema' });
+      const name = h('input', { type: 'text', maxlength: 120, placeholder: _t('Mi tema') });
       name.value = theme.name || '';
       name.addEventListener('input', () => { theme.name = name.value; onChange && onChange(); });
 
@@ -106,7 +106,7 @@
       fontSel.addEventListener('change', () => { theme.font = fontSel.value; SV.loadFont(theme.font); changed(); });
 
       const imgPrev = h('div', { class: 'img-field-preview' }, theme.bgImage ? h('img', { src: SV.asset(theme.bgImage), alt: '' }) : h('i', { class: 'ti ti-photo' }));
-      const up = h('button', { type: 'button', class: 'btn btn-soft btn-sm' }, h('i', { class: 'ti ti-upload' }), 'Subir imagen');
+      const up = h('button', { type: 'button', class: 'btn btn-soft btn-sm' }, h('i', { class: 'ti ti-upload' }), _t('Subir imagen'));
       up.addEventListener('click', async () => {
         const f = await App.pickFile('image/*');
         if (!f) return;
@@ -114,28 +114,28 @@
       });
 
       root.append(...[
-        field('Nombre del tema', name),
-        h('div', { class: 'panel-section-title' }, 'Colores'),
+        field(_t('Nombre del tema'), name),
+        h('div', { class: 'panel-section-title' }, _t('Colores')),
         h('div', { class: 'color-grid' },
-          color('accent', 'Principal'), color('bg', theme.bgStyle === 'gradient' ? 'Fondo (inicio)' : 'Fondo'),
-          theme.bgStyle === 'gradient' ? color('bg2', 'Fondo (fin)') : null,
-          color('card', 'Tarjeta'), color('text', 'Texto'), color('muted', 'Texto secundario'),
-          color('border', 'Bordes'), color('input', 'Campos')),
+          color('accent', _t('Principal')), color('bg', theme.bgStyle === 'gradient' ? _t('Fondo (inicio)') : _t('Fondo')),
+          theme.bgStyle === 'gradient' ? color('bg2', _t('Fondo (fin)')) : null,
+          color('card', _t('Tarjeta')), color('text', _t('Texto')), color('muted', _t('Texto secundario')),
+          color('border', _t('Bordes')), color('input', _t('Campos'))),
         h('div', { class: 'auto-row' },
-          h('span', { class: 'muted small' }, h('i', { class: 'ti ti-wand' }), ' Generar desde el color principal:'),
-          h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => auto(false) }, h('i', { class: 'ti ti-sun' }), 'Claro'),
-          h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => auto(true) }, h('i', { class: 'ti ti-moon' }), 'Oscuro')),
+          h('span', { class: 'muted small' }, h('i', { class: 'ti ti-wand' }), ' ' + _t('Generar desde el color principal:')),
+          h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => auto(false) }, h('i', { class: 'ti ti-sun' }), _t('Claro')),
+          h('button', { type: 'button', class: 'btn btn-soft btn-sm', onclick: () => auto(true) }, h('i', { class: 'ti ti-moon' }), _t('Oscuro'))),
         warn,
-        h('div', { class: 'panel-section-title' }, 'Fondo'),
-        field(null, seg('bgStyle', [['solid', 'Sólido', 'ti-square-filled'], ['gradient', 'Degradado', 'ti-color-swatch'], ['image', 'Imagen', 'ti-photo']])),
+        h('div', { class: 'panel-section-title' }, _t('Fondo')),
+        field(null, seg('bgStyle', [['solid', _t('Sólido'), 'ti-square-filled'], ['gradient', _t('Degradado'), 'ti-color-swatch'], ['image', _t('Imagen'), 'ti-photo']])),
         theme.bgStyle === 'image' ? h('div', null,
-          field('Imagen de fondo', h('div', { class: 'img-field' }, imgPrev, h('div', { class: 'img-field-side' }, h('div', { class: 'img-field-btns' }, up)))),
-          field('Oscurecer imagen', range('overlay', 0, 85, '%'))) : null,
-        field('Opacidad de la tarjeta', range('cardOpacity', 50, 100, '%'), 'Por debajo de 100% se aplica un efecto cristal sobre el fondo.'),
-        h('div', { class: 'panel-section-title' }, 'Forma y tipografía'),
-        field('Tipografía', h('div', { class: 'select-wrap' }, fontSel)),
-        field('Redondeo de esquinas', range('radius', 0, 36, 'px')),
-        toggle('shadow', 'Sombra en la tarjeta', 'Si la desactivas se dibuja un borde fino'),
+          field(_t('Imagen de fondo'), h('div', { class: 'img-field' }, imgPrev, h('div', { class: 'img-field-side' }, h('div', { class: 'img-field-btns' }, up)))),
+          field(_t('Oscurecer imagen'), range('overlay', 0, 85, '%'))) : null,
+        field(_t('Opacidad de la tarjeta'), range('cardOpacity', 50, 100, '%'), _t('Por debajo de 100% se aplica un efecto cristal sobre el fondo.')),
+        h('div', { class: 'panel-section-title' }, _t('Forma y tipografía')),
+        field(_t('Tipografía'), h('div', { class: 'select-wrap' }, fontSel)),
+        field(_t('Redondeo de esquinas'), range('radius', 0, 36, 'px')),
+        toggle('shadow', _t('Sombra en la tarjeta'), _t('Si la desactivas se dibuja un borde fino')),
       ].filter(Boolean));
       checkContrast();
     }
@@ -145,18 +145,21 @@
 
   /* ---------- vista previa de muestra ---------- */
   SV.themeSample = function () {
+    const lang = SV.adminLang;
+    SV.lang = lang;
+    const L = (es, en) => (lang === 'en' ? en : es);
     const blocks = [
-      Object.assign(SV.newBlock('heading'), { text: 'Vista previa del tema' }),
-      Object.assign(SV.newBlock('single_choice'), { title: '¿Cómo nos conociste?', required: true, options: [SV.opt('Redes sociales'), SV.opt('Un amigo'), SV.opt('Buscador')] }),
-      Object.assign(SV.newBlock('rating'), { title: 'Valora tu experiencia' }),
-      Object.assign(SV.newBlock('short_text'), { title: 'Tu nombre' }),
+      Object.assign(SV.newBlock('heading', lang), { text: L('Vista previa del tema', 'Theme preview') }),
+      Object.assign(SV.newBlock('single_choice', lang), { title: L('¿Cómo nos conociste?', 'How did you hear about us?'), required: true, options: [SV.opt(L('Redes sociales', 'Social media')), SV.opt(L('Un amigo', 'A friend')), SV.opt(L('Buscador', 'Search engine'))] }),
+      Object.assign(SV.newBlock('rating', lang), { title: L('Valora tu experiencia', 'Rate your experience') }),
+      Object.assign(SV.newBlock('short_text', lang), { title: L('Tu nombre', 'Your name') }),
     ];
     const states = { [blocks[1].id]: { value: blocks[1].options[0].id, other: '' }, [blocks[2].id]: { value: 4, other: '' } };
     let n = 0;
     return h('div', { class: 'sv-shell' },
       h('section', { class: 'sv-card is-step' },
-        h('div', { class: 'sv-step-head' }, h('span', { class: 'sv-step-count' }, 'Paso 1 de 2'), h('span', { class: 'sv-step-title' }, 'Sobre ti')),
+        h('div', { class: 'sv-step-head' }, h('span', { class: 'sv-step-count' }, SV.t('stepOf', { n: 1, total: 2 })), h('span', { class: 'sv-step-title' }, L('Sobre ti', 'About you'))),
         h('div', { class: 'sv-blocks' }, blocks.map((b) => SV.render(b, { mode: 'live', number: SV.isQuestion(b.type) ? ++n : null, state: states[b.id] || { value: null, other: '' } }))),
-        h('div', { class: 'sv-actions' }, h('span', { class: 'sv-btn sv-btn-ghost' }, h('i', { class: 'ti ti-arrow-left' }), 'Atrás'), h('span', { class: 'sv-btn sv-btn-primary' }, 'Siguiente', h('i', { class: 'ti ti-arrow-right' })))));
+        h('div', { class: 'sv-actions' }, h('span', { class: 'sv-btn sv-btn-ghost' }, h('i', { class: 'ti ti-arrow-left' }), SV.t('back')), h('span', { class: 'sv-btn sv-btn-primary' }, SV.t('next'), h('i', { class: 'ti ti-arrow-right' })))));
   };
 })();

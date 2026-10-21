@@ -1,4 +1,4 @@
-/* Motor de la encuesta pública */
+/* Public survey runner (bilingual) */
 (function () {
   'use strict';
   const S = window.SURVEY;
@@ -12,46 +12,91 @@
   const def = S.def || {};
   const st = def.settings || {};
   const steps = (def.steps || []).filter((s) => (s.blocks || []).length);
-  const welcome = def.welcome || {};
-  const thanks = def.thanks || {};
   const KEY_DRAFT = 'svy_draft_' + S.uid;
   const KEY_DONE = 'svy_done_' + S.uid;
+  const KEY_LANG = 'svy_lang';
 
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin almacenamiento */ } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } },
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* noop */ } },
   };
 
+  /* ---------- language ---------- */
+  const L = S.langs || { primary: 'es', langs: ['es'], initial: 'es' };
+  let lang = L.initial;
+  if (L.langs.length > 1 && !S.forcedLang) {
+    const saved = store.get(KEY_LANG);
+    if (L.langs.includes(saved)) lang = saved;
+  }
+  const loc = (obj, kind) => SV.localize(obj, kind, lang, L.primary);
+  function applyLang() {
+    SV.lang = lang;
+    document.documentElement.lang = lang;
+    const w = loc(def.welcome || {}, 'welcome');
+    document.title = w.title || S.titles[lang] || S.title;
+    header.querySelectorAll('.sv-lang button').forEach((b) => {
+      b.classList.toggle('is-on', b.dataset.lang === lang);
+      b.setAttribute('aria-pressed', b.dataset.lang === lang ? 'true' : 'false');
+    });
+  }
+
   SV.applyTheme(root, S.theme);
   if (st.logo) header.append(h('img', { class: 'sv-logo', src: SV.asset(st.logo), alt: '' }));
+  if (L.langs.length > 1) {
+    header.append(h('div', { class: 'sv-lang', role: 'group', 'aria-label': 'Language / Idioma' },
+      L.langs.map((l) => h('button', { type: 'button', 'data-lang': l, title: SV.LANGS[l].name, onclick: () => setLang(l) }, SV.LANGS[l].short))));
+    header.classList.add('has-lang');
+  }
+  applyLang();
 
-  // Numeración global de preguntas
+  function setLang(l) {
+    if (l === lang) return;
+    lang = l;
+    store.set(KEY_LANG, l);
+    applyLang();
+    render();
+  }
+
+  // Global question numbering
   const numbers = {};
   let qn = 0;
   steps.forEach((s) => s.blocks.forEach((b) => { if (SV.isQuestion(b.type)) numbers[b.id] = ++qn; }));
 
   let answers = {};
-  let current = -1;
+  let screen = 'welcome'; // 'welcome' | step index | 'thanks' | { kind, msg }
   const startedAt = Date.now();
+  let started = false;
+
+  const msgFor = (kind) => (S.messages && S.messages[kind] && (S.messages[kind][lang] || S.messages[kind][L.primary])) || '';
 
   if (S.state === 'open' && !S.preview) {
-    if (st.onePerBrowser && store.get(KEY_DONE)) return showMessage('done', st.doneMessage || 'Ya has participado en esta encuesta.');
+    if (st.onePerBrowser && store.get(KEY_DONE)) {
+      screen = { kind: 'done' };
+      return render();
+    }
     const draft = store.get(KEY_DRAFT);
     if (draft && typeof draft === 'object') answers = draft.answers || {};
   }
 
-  if (S.state !== 'open') return showMessage(S.state, S.message);
-  if (!steps.length) return showMessage('closed', 'Esta encuesta todavía no tiene preguntas.');
+  if (S.state !== 'open') screen = { kind: S.state };
+  else if (!steps.length) screen = { kind: 'closed', text: 'noQuestions' };
+  else screen = (def.welcome || {}).enabled !== false ? 'welcome' : 0;
+  render();
 
-  if (welcome.enabled !== false) showWelcome();
-  else go(0);
+  /* ---------- screens ---------- */
 
-  /* ---------- pantallas ---------- */
+  function render(animate) {
+    if (screen === 'welcome') return showWelcome();
+    if (screen === 'thanks') return showThanks(false);
+    if (typeof screen === 'number') return showStep(screen, animate);
+    return showMessage(screen.kind, screen.text ? SV.t(screen.text) : msgFor(screen.kind));
+  }
 
-  function swap(nodes, cls) {
+  function swap(nodes, cls, animate) {
     card.className = 'sv-card ' + (cls || '');
     card.replaceChildren(...[].concat(nodes).filter(Boolean));
+    if (animate === false) return;
     card.classList.remove('sv-enter');
     void card.offsetWidth;
     card.classList.add('sv-enter');
@@ -64,35 +109,41 @@
   }
 
   function showWelcome() {
-    current = -1;
+    const w = loc(def.welcome || {}, 'welcome');
     setProgress(0);
     const mins = Math.max(1, Math.round(qn * 0.3));
     swap([
-      welcome.image ? h('img', { class: 'sv-hero', src: SV.asset(welcome.image), alt: '' }) : null,
-      h('h1', { class: 'sv-welcome-title' }, welcome.title || S.title),
-      welcome.text ? h('div', { class: 'sv-welcome-text', html: SV.fmt(welcome.text) }) : null,
+      w.image ? h('img', { class: 'sv-hero', src: SV.asset(w.image), alt: '' }) : null,
+      h('h1', { class: 'sv-welcome-title' }, w.title || S.titles[lang] || S.title),
+      w.text ? h('div', { class: 'sv-welcome-text', html: SV.fmt(w.text) }) : null,
       h('div', { class: 'sv-meta' },
-        h('span', null, h('i', { class: 'ti ti-list-check' }), ` ${qn} pregunta${qn === 1 ? '' : 's'}`),
-        h('span', null, h('i', { class: 'ti ti-clock' }), ` ~${mins} min`),
-        st.onePerBrowser ? h('span', null, h('i', { class: 'ti ti-shield-check' }), ' Una respuesta por persona') : null),
+        h('span', null, h('i', { class: 'ti ti-list-check' }), ' ' + SV.t(qn === 1 ? 'question1' : 'questionN', { n: qn })),
+        h('span', null, h('i', { class: 'ti ti-clock' }), ' ' + SV.t('minutes', { n: mins })),
+        st.onePerBrowser ? h('span', null, h('i', { class: 'ti ti-shield-check' }), ' ' + SV.t('onePerPerson')) : null),
       h('div', { class: 'sv-actions center' },
-        h('button', { class: 'sv-btn sv-btn-primary sv-btn-lg', type: 'button', onclick: () => go(0) }, welcome.button || 'Comenzar', h('i', { class: 'ti ti-arrow-right' }))),
+        h('button', { class: 'sv-btn sv-btn-primary sv-btn-lg', type: 'button', onclick: () => go(0) }, w.button || SV.t('start'), h('i', { class: 'ti ti-arrow-right' }))),
     ], 'is-welcome');
   }
 
   function go(i) {
-    if (current === -1) trackStart();
-    current = i;
-    const step = steps[i];
+    if (!started) { started = true; trackStart(); }
+    screen = i;
+    showStep(i, true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showStep(i, animate) {
+    const step = loc(steps[i], 'step');
     setProgress((i / steps.length) * 100 + 4);
     const nodes = [];
     if (steps.length > 1) {
       nodes.push(h('div', { class: 'sv-step-head' },
-        h('span', { class: 'sv-step-count' }, `Paso ${i + 1} de ${steps.length}`),
+        h('span', { class: 'sv-step-count' }, SV.t('stepOf', { n: i + 1, total: steps.length })),
         step.title ? h('span', { class: 'sv-step-title' }, step.title) : null));
     }
     const list = h('div', { class: 'sv-blocks' });
-    step.blocks.forEach((b) => {
+    steps[i].blocks.forEach((raw) => {
+      const b = loc(raw, 'block');
       if (SV.isQuestion(b.type)) {
         answers[b.id] = answers[b.id] || { value: null, other: '' };
         const el = SV.render(b, {
@@ -113,20 +164,19 @@
     nodes.push(list);
 
     const last = i === steps.length - 1;
-    const back = (st.allowBack !== false) && (i > 0 || welcome.enabled !== false)
-      ? h('button', { class: 'sv-btn sv-btn-ghost', type: 'button', onclick: () => (i > 0 ? go(i - 1) : showWelcome()) }, h('i', { class: 'ti ti-arrow-left' }), 'Atrás')
+    const back = (st.allowBack !== false) && (i > 0 || (def.welcome || {}).enabled !== false)
+      ? h('button', { class: 'sv-btn sv-btn-ghost', type: 'button', onclick: () => (i > 0 ? go(i - 1) : ((screen = 'welcome'), showWelcome())) }, h('i', { class: 'ti ti-arrow-left' }), SV.t('back'))
       : h('span');
     const next = h('button', { class: 'sv-btn sv-btn-primary', type: 'button' },
-      last ? 'Enviar' : 'Siguiente', h('i', { class: 'ti ' + (last ? 'ti-send' : 'ti-arrow-right') }));
+      SV.t(last ? 'submit' : 'next'), h('i', { class: 'ti ' + (last ? 'ti-send' : 'ti-arrow-right') }));
     next.addEventListener('click', () => {
-      if (!validateStep(step)) return;
+      if (!validateStep(steps[i])) return;
       if (last) submit(next);
       else go(i + 1);
     });
     nodes.push(h('div', { class: 'sv-err-global', role: 'alert' }));
     nodes.push(h('div', { class: 'sv-actions' }, back, next));
-    swap(nodes, 'is-step');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    swap(nodes, 'is-step', animate);
 
     card.querySelectorAll('input:not([type=range]):not([type=date])').forEach((inp) => {
       inp.addEventListener('keydown', (e) => {
@@ -137,8 +187,9 @@
 
   function validateStep(step) {
     let first = null;
-    step.blocks.forEach((b) => {
-      if (!SV.isQuestion(b.type)) return;
+    step.blocks.forEach((raw) => {
+      if (!SV.isQuestion(raw.type)) return;
+      const b = loc(raw, 'block');
       const el = card.querySelector(`.sv-q[data-id="${b.id}"]`);
       const msg = SV.validate(b, answers[b.id]);
       el.classList.toggle('has-error', !!msg);
@@ -174,10 +225,10 @@
   async function submit(btn) {
     const errBox = card.querySelector('.sv-err-global');
     errBox.textContent = '';
-    if (S.preview) return showThanks();
+    if (S.preview) return showThanks(true);
     btn.disabled = true;
     btn.classList.add('is-loading');
-    const payload = { uid: S.uid, answers: {}, others: {}, duration: Math.round((Date.now() - startedAt) / 1000), website: '' };
+    const payload = { uid: S.uid, lang, answers: {}, others: {}, duration: Math.round((Date.now() - startedAt) / 1000), website: '' };
     steps.forEach((s) => s.blocks.forEach((b) => {
       if (!SV.isQuestion(b.type)) return;
       const a = answers[b.id];
@@ -197,11 +248,12 @@
       if (res.ok && data.ok) {
         if (st.onePerBrowser) store.set(KEY_DONE, Date.now());
         store.del(KEY_DRAFT);
-        return showThanks();
+        return showThanks(true);
       }
       if (res.status === 409) {
         store.set(KEY_DONE, Date.now());
-        return showMessage('done', data.error || st.doneMessage);
+        screen = { kind: 'done' };
+        return render();
       }
       if (data.field) {
         const el = card.querySelector(`.sv-q[data-id="${data.field}"]`);
@@ -211,37 +263,39 @@
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
-      errBox.textContent = data.error || 'No se pudo enviar. Inténtalo de nuevo.';
+      errBox.textContent = data.error || SV.t('sendError');
     } catch (e) {
-      errBox.textContent = 'Error de conexión. Comprueba tu red e inténtalo de nuevo.';
+      errBox.textContent = SV.t('netError');
     }
     btn.disabled = false;
     btn.classList.remove('is-loading');
   }
 
-  function showThanks() {
-    current = steps.length;
+  function showThanks(celebrate) {
+    screen = 'thanks';
     setProgress(100);
-    const url = /^https?:\/\//i.test(thanks.url || '') ? thanks.url : '';
+    const t = loc(def.thanks || {}, 'thanks');
+    const url = /^https?:\/\//i.test(t.url || '') ? t.url : '';
     swap([
       h('div', { class: 'sv-done-anim' }, h('svg', { viewBox: '0 0 52 52', html: '<circle cx="26" cy="26" r="24" fill="none"/><path fill="none" d="M15 27l7 7 15-15"/>' })),
-      thanks.image ? h('img', { class: 'sv-hero', src: SV.asset(thanks.image), alt: '' }) : null,
-      h('h1', { class: 'sv-welcome-title' }, thanks.title || '¡Gracias!'),
-      thanks.text ? h('div', { class: 'sv-welcome-text', html: SV.fmt(thanks.text) }) : null,
-      url && thanks.button ? h('div', { class: 'sv-actions center' }, h('a', { class: 'sv-btn sv-btn-primary', href: url }, thanks.button, h('i', { class: 'ti ti-external-link' }))) : null,
-      S.preview ? h('div', { class: 'sv-actions center' }, h('button', { class: 'sv-btn sv-btn-ghost', type: 'button', onclick: () => location.reload() }, h('i', { class: 'ti ti-refresh' }), 'Reiniciar vista previa')) : null,
-    ], 'is-thanks');
+      t.image ? h('img', { class: 'sv-hero', src: SV.asset(t.image), alt: '' }) : null,
+      h('h1', { class: 'sv-welcome-title' }, t.title || SV.t('thanks')),
+      t.text ? h('div', { class: 'sv-welcome-text', html: SV.fmt(t.text) }) : null,
+      url && t.button ? h('div', { class: 'sv-actions center' }, h('a', { class: 'sv-btn sv-btn-primary', href: url }, t.button, h('i', { class: 'ti ti-external-link' }))) : null,
+      S.preview ? h('div', { class: 'sv-actions center' }, h('button', { class: 'sv-btn sv-btn-ghost', type: 'button', onclick: () => location.reload() }, h('i', { class: 'ti ti-refresh' }), SV.t('restart'))) : null,
+    ], 'is-thanks', celebrate);
+    if (!celebrate) return;
     confetti();
-    if (url && !thanks.button && !S.preview) setTimeout(() => (location.href = url), 3500);
+    if (url && !t.button && !S.preview) setTimeout(() => (location.href = url), 3500);
   }
 
   function showMessage(kind, msg) {
     if (progress) progress.hidden = true;
     const icons = { done: 'ti-circle-check', closed: 'ti-lock', missing: 'ti-mood-confuzed' };
-    const titles = { done: '¡Ya participaste!', closed: 'Encuesta no disponible', missing: 'Encuesta no encontrada' };
+    const titles = { done: 'doneTitle', closed: 'closedTitle', missing: 'missingTitle' };
     swap([
       h('div', { class: 'sv-msg-icon is-' + kind }, h('i', { class: 'ti ' + (icons[kind] || 'ti-info-circle') })),
-      h('h1', { class: 'sv-welcome-title' }, titles[kind] || ''),
+      h('h1', { class: 'sv-welcome-title' }, titles[kind] ? SV.t(titles[kind]) : ''),
       h('p', { class: 'sv-welcome-text' }, msg || ''),
     ], 'is-message');
   }

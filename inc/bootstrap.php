@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 define('APP_ROOT', dirname(__DIR__));
-define('APP_VERSION', '1.0.0');
+define('APP_VERSION', '1.1.0');
 
 $GLOBALS['__config'] = is_file(APP_ROOT . '/config.php') ? require APP_ROOT . '/config.php' : null;
 
@@ -166,12 +166,12 @@ function fmt_date(?string $dt, bool $time = true): string
 
 function time_ago(?string $dt): string
 {
-    if (!$dt) return 'nunca';
+    if (!$dt) return __('nunca');
     $d = time() - strtotime($dt);
-    if ($d < 60) return 'hace un momento';
-    if ($d < 3600) return 'hace ' . floor($d / 60) . ' min';
-    if ($d < 86400) return 'hace ' . floor($d / 3600) . ' h';
-    if ($d < 86400 * 30) return 'hace ' . floor($d / 86400) . ' d';
+    if ($d < 60) return __('hace un momento');
+    if ($d < 3600) return __('hace {n} min', ['n' => floor($d / 60)]);
+    if ($d < 86400) return __('hace {n} h', ['n' => floor($d / 3600)]);
+    if ($d < 86400 * 30) return __('hace {n} d', ['n' => floor($d / 86400)]);
     return fmt_date($dt, false);
 }
 
@@ -191,7 +191,7 @@ function require_login(bool $api = false): array
 {
     $u = current_user();
     if ($u) return $u;
-    if ($api) json_out(['ok' => false, 'error' => 'Sesión caducada. Vuelve a iniciar sesión.'], 401);
+    if ($api) json_out(['ok' => false, 'error' => __('Sesión caducada. Vuelve a iniciar sesión.')], 401);
     redirect(url('admin/login.php'));
 }
 
@@ -205,7 +205,7 @@ function csrf_check(): void
 {
     $sent = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf'] ?? '');
     if (!is_string($sent) || !hash_equals(csrf_token(), $sent)) {
-        json_out(['ok' => false, 'error' => 'Token CSRF inválido. Recarga la página.'], 419);
+        json_out(['ok' => false, 'error' => __('Token CSRF inválido. Recarga la página.')], 419);
     }
 }
 
@@ -241,31 +241,37 @@ function default_settings(): array
         'startAt'       => '',
         'endAt'         => '',
         'maxResponses'  => 0,
-        'closedMessage' => 'Esta encuesta ya no acepta respuestas. ¡Gracias por tu interés!',
-        'doneMessage'   => 'Ya has participado en esta encuesta. ¡Gracias por tu tiempo!',
+        'closedMessage' => '',          // empty = built-in message in the participant's language
+        'doneMessage'   => '',
+        'lang'          => 'es',        // primary content language
+        'languages'     => ['es'],      // ['es', 'en'] = bilingual survey
     ];
 }
 
-function default_definition(string $title = 'Nueva encuesta'): array
+function default_definition(string $title = 'Nueva encuesta', string $lang = 'es'): array
 {
+    $en = $lang === 'en';
+    $settings = default_settings();
+    $settings['lang'] = $en ? 'en' : 'es';
+    $settings['languages'] = [$settings['lang']];
     return [
-        'settings' => default_settings(),
+        'settings' => $settings,
         'welcome'  => [
             'enabled' => true,
             'title'   => $title,
-            'text'    => 'Nos encantaría conocer tu opinión. Solo te llevará un par de minutos.',
+            'text'    => $en ? "We'd love to hear your opinion. It will only take a couple of minutes." : 'Nos encantaría conocer tu opinión. Solo te llevará un par de minutos.',
             'image'   => '',
-            'button'  => 'Comenzar',
+            'button'  => '',
         ],
         'thanks' => [
-            'title'  => '¡Muchas gracias!',
-            'text'   => 'Tus respuestas se han registrado correctamente.',
+            'title'  => $en ? 'Thank you very much!' : '¡Muchas gracias!',
+            'text'   => $en ? 'Your answers have been recorded.' : 'Tus respuestas se han registrado correctamente.',
             'image'  => '',
             'button' => '',
             'url'    => '',
         ],
         'steps' => [
-            ['id' => 's_' . random_id(6), 'title' => 'Paso 1', 'blocks' => []],
+            ['id' => 's_' . random_id(6), 'title' => $en ? 'Step 1' : 'Paso 1', 'blocks' => []],
         ],
     ];
 }
@@ -338,3 +344,10 @@ function font_link(string $font): string
 }
 
 require __DIR__ . '/themes.php';
+require __DIR__ . '/i18n.php';
+require __DIR__ . '/migrate.php';
+
+if ($GLOBALS['__config'] !== null && !defined('INSTALLING')) run_migrations();
+
+// ?ui=es|en switches the panel language; resolve it before any output so the cookie can be set
+if (isset($_GET['ui'])) admin_lang();

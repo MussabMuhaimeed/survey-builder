@@ -1,5 +1,5 @@
 <?php
-// Carga, agregación y exportación de resultados
+// Loading, aggregation and export of results (always shown in the survey's primary language)
 
 const CHOICE_TYPES = ['single_choice', 'multiple_choice', 'dropdown', 'image_choice', 'yes_no'];
 const NUMERIC_TYPES = ['rating', 'scale', 'nps', 'slider', 'number'];
@@ -13,7 +13,7 @@ function results_load(array $s, ?string $from = null, ?string $to = null): array
     if ($from && preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) { $where .= ' AND r.created_at >= ?'; $p[] = $from . ' 00:00:00'; }
     if ($to && preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) { $where .= ' AND r.created_at <= ?'; $p[] = $to . ' 23:59:59'; }
 
-    $responses = q("SELECT r.id, r.created_at, r.duration_sec FROM responses r WHERE $where ORDER BY r.created_at DESC", $p)->fetchAll();
+    $responses = q("SELECT r.id, r.created_at, r.duration_sec, r.lang FROM responses r WHERE $where ORDER BY r.created_at DESC", $p)->fetchAll();
     $answers = [];
     $st = q("SELECT a.response_id, a.question_id, a.value, a.other_text FROM answers a JOIN responses r ON r.id = a.response_id WHERE $where", $p);
     while ($row = $st->fetch()) {
@@ -28,7 +28,7 @@ function results_load(array $s, ?string $from = null, ?string $to = null): array
 function option_map(array $q): array
 {
     if (($q['type'] ?? '') === 'yes_no') {
-        return ['yes' => ['id' => 'yes', 'label' => $q['yesLabel'] ?? 'Sí'], 'no' => ['id' => 'no', 'label' => $q['noLabel'] ?? 'No']];
+        return ['yes' => ['id' => 'yes', 'label' => ($q['yesLabel'] ?? '') ?: __('Sí')], 'no' => ['id' => 'no', 'label' => ($q['noLabel'] ?? '') ?: __('No')]];
     }
     $m = [];
     foreach ($q['options'] ?? [] as $o) $m[$o['id']] = $o;
@@ -80,7 +80,7 @@ function results_aggregate(array $def, array $responses, array $answers): array
                 $list[] = ['id' => $id, 'label' => $o['label'] ?? '', 'image' => $o['image'] ?? '', 'count' => $counts[$id], 'pct' => $n ? round($counts[$id] / $n * 100, 1) : 0];
             }
             if (!empty($q['allowOther']) || $others) {
-                $list[] = ['id' => '__other__', 'label' => $q['otherLabel'] ?? 'Otro', 'image' => '', 'count' => count($others), 'pct' => $n ? round(count($others) / $n * 100, 1) : 0];
+                $list[] = ['id' => '__other__', 'label' => ($q['otherLabel'] ?? '') ?: __('Otro'), 'image' => '', 'count' => count($others), 'pct' => $n ? round(count($others) / $n * 100, 1) : 0];
             }
             $stat['multi'] = $multi;
             $stat['options'] = $list;
@@ -190,7 +190,7 @@ function answer_text(array $q, $v, ?string $other): string
         $opts = option_map($q);
         $parts = [];
         foreach ((array) $v as $sel) {
-            if ($sel === '__other__') $parts[] = ($q['otherLabel'] ?? 'Otro') . ': ' . (string) $other;
+            if ($sel === '__other__') $parts[] = (($q['otherLabel'] ?? '') ?: __('Otro')) . ': ' . (string) $other;
             else $parts[] = $opts[$sel]['label'] ?? (string) $sel;
         }
         return implode(', ', $parts);
@@ -230,7 +230,9 @@ function export_csv(array $s): void
     $fh = fopen('php://output', 'w');
     fwrite($fh, "\xEF\xBB\xBF");
 
-    $head = ['ID', 'Fecha', 'Duración (s)'];
+    $L = survey_langs($s['def']);
+    $head = ['ID', __('Fecha'), __('Duración (s)')];
+    if ($L['bilingual']) $head[] = __('Idioma');
     foreach ($qs as $q) {
         if ($q['type'] === 'matrix') {
             foreach ($q['rows'] ?? [] as $r) $head[] = ($q['title'] ?? '') . ' — ' . $r['label'];
@@ -242,6 +244,7 @@ function export_csv(array $s): void
 
     foreach (array_reverse($responses) as $r) {
         $row = [$r['id'], $r['created_at'], $r['duration_sec']];
+        if ($L['bilingual']) $row[] = strtoupper((string) ($r['lang'] ?? ''));
         $map = $answers[(int) $r['id']] ?? [];
         foreach ($qs as $qid => $q) {
             $a = $map[$qid] ?? null;

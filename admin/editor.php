@@ -18,7 +18,7 @@ $payload = [
 ];
 $curTheme = theme_config($s['def']['settings']['theme'] ?? null);
 
-$pageTitle = 'Editor · ' . $s['title'];
+$pageTitle = __('Editor') . ' · ' . $s['title'];
 $noTopbar = true;
 $bodyClass = 'is-editor';
 $extraHead = '<link rel="stylesheet" href="' . url('assets/css/survey.css') . '?v=' . APP_VERSION . '">';
@@ -35,33 +35,35 @@ require __DIR__ . '/partials/header.php';
 ?>
 <div class="ed" id="ed">
   <header class="ed-top">
-    <a class="icon-btn" href="index.php" title="Volver a encuestas"><i class="ti ti-arrow-left"></i></a>
-    <input class="ed-title" id="ed-title" value="<?= e($s['title']) ?>" maxlength="200" aria-label="Título de la encuesta">
-    <span class="ed-save" id="ed-save"><i class="ti ti-cloud-check"></i><span>Guardado</span></span>
+    <a class="icon-btn" href="index.php" title="<?= e(__('Volver a encuestas')) ?>"><i class="ti ti-arrow-left"></i></a>
+    <input class="ed-title" id="ed-title" value="<?= e($s['title']) ?>" maxlength="200" aria-label="<?= e(__('Título de la encuesta')) ?>">
+    <span class="ed-save" id="ed-save"><i class="ti ti-cloud-check"></i><span><?= e(__('Guardado')) ?></span></span>
+    <div class="seg seg-sm ed-langs" id="ed-langs" hidden aria-label="<?= e(__('Idioma de edición')) ?>"></div>
     <div class="ed-top-actions">
-      <button class="icon-btn" id="ed-undo" title="Deshacer (Ctrl+Z)" disabled><i class="ti ti-arrow-back-up"></i></button>
-      <button class="icon-btn" id="ed-redo" title="Rehacer (Ctrl+Shift+Z)" disabled><i class="ti ti-arrow-forward-up"></i></button>
+      <button class="icon-btn" id="ed-undo" title="<?= e(__('Deshacer (Ctrl+Z)')) ?>" disabled><i class="ti ti-arrow-back-up"></i></button>
+      <button class="icon-btn" id="ed-redo" title="<?= e(__('Rehacer (Ctrl+Shift+Z)')) ?>" disabled><i class="ti ti-arrow-forward-up"></i></button>
       <div class="seg seg-sm hide-sm" id="ed-device">
-        <button class="active" data-device="desktop" title="Escritorio"><i class="ti ti-device-desktop"></i></button>
-        <button data-device="mobile" title="Móvil"><i class="ti ti-device-mobile"></i></button>
+        <button class="active" data-device="desktop" title="<?= e(__('Escritorio')) ?>"><i class="ti ti-device-desktop"></i></button>
+        <button data-device="mobile" title="<?= e(__('Móvil')) ?>"><i class="ti ti-device-mobile"></i></button>
       </div>
-      <button class="btn btn-ghost" id="ed-preview"><i class="ti ti-eye"></i><span class="hide-sm">Vista previa</span></button>
-      <a class="btn btn-ghost hide-sm" href="report.php?id=<?= (int) $s['id'] ?>"><i class="ti ti-chart-bar"></i><span>Resultados</span></a>
-      <button class="btn btn-ghost" id="ed-share" title="Compartir"><i class="ti ti-share"></i></button>
+      <button class="btn btn-ghost" id="ed-preview"><i class="ti ti-eye"></i><span class="hide-sm"><?= e(__('Vista previa')) ?></span></button>
+      <a class="btn btn-ghost hide-sm" href="report.php?id=<?= (int) $s['id'] ?>"><i class="ti ti-chart-bar"></i><span><?= e(__('Resultados')) ?></span></a>
+      <button class="btn btn-ghost" id="ed-share" title="<?= e(__('Compartir')) ?>"><i class="ti ti-share"></i></button>
       <div class="status-wrap">
-        <select id="ed-status" class="status-select" aria-label="Estado">
-          <option value="draft">Borrador</option>
-          <option value="published">Publicada</option>
-          <option value="closed">Cerrada</option>
+        <select id="ed-status" class="status-select" aria-label="<?= e(__('Estado')) ?>">
+          <option value="draft"><?= e(__('Borrador')) ?></option>
+          <option value="published"><?= e(__('Publicada')) ?></option>
+          <option value="closed"><?= e(__('Cerrada')) ?></option>
         </select>
       </div>
     </div>
   </header>
 
-  <aside class="ed-palette" id="ed-palette" aria-label="Componentes"></aside>
+  <aside class="ed-palette" id="ed-palette" aria-label="<?= e(__('Componentes')) ?>"></aside>
 
   <main class="ed-main">
-    <nav class="ed-steps" id="ed-steps" aria-label="Pasos"></nav>
+    <nav class="ed-steps" id="ed-steps" aria-label="<?= e(__('Pasos')) ?>"></nav>
+    <div class="ed-tr-banner" id="ed-tr-banner" hidden></div>
     <div class="ed-stage" id="ed-stage">
       <div class="ed-frame" id="ed-frame">
         <div class="sv-root ed-canvas" id="ed-canvas"></div>
@@ -69,18 +71,18 @@ require __DIR__ . '/partials/header.php';
     </div>
   </main>
 
-  <aside class="ed-panel" id="ed-panel" aria-label="Propiedades">
+  <aside class="ed-panel" id="ed-panel" aria-label="<?= e(__('Propiedades')) ?>">
     <div class="ed-panel-tabs" id="ed-panel-tabs">
-      <button data-tab="props" class="active"><i class="ti ti-adjustments"></i> Propiedades</button>
-      <button data-tab="design"><i class="ti ti-palette"></i> Diseño</button>
-      <button data-tab="settings"><i class="ti ti-settings"></i> Ajustes</button>
+      <button data-tab="props" class="active"><i class="ti ti-adjustments"></i> <?= e(__('Propiedades')) ?></button>
+      <button data-tab="design"><i class="ti ti-palette"></i> <?= e(__('Diseño')) ?></button>
+      <button data-tab="settings"><i class="ti ti-settings"></i> <?= e(__('Ajustes')) ?></button>
     </div>
     <div class="ed-panel-body" id="ed-panel-body"></div>
   </aside>
 
   <div class="ed-mobilebar">
-    <button data-mobile="palette"><i class="ti ti-plus"></i> Añadir</button>
-    <button data-mobile="panel"><i class="ti ti-adjustments"></i> Editar</button>
+    <button data-mobile="palette"><i class="ti ti-plus"></i> <?= e(__('Añadir')) ?></button>
+    <button data-mobile="panel"><i class="ti ti-adjustments"></i> <?= e(__('Editar')) ?></button>
   </div>
   <div class="ed-scrim" id="ed-scrim"></div>
 </div>

@@ -1,5 +1,5 @@
 <?php
-// Copia este archivo como config.php (o usa install.php, que lo genera por ti).
+// Copy this file to config.php (or run install.php, which generates it for you).
 return [
     'db' => [
         'host'    => 'localhost',
@@ -9,12 +9,12 @@ return [
         'pass'    => '',
         'charset' => 'utf8mb4',
     ],
-    // URL pública de la app (sin barra final). Vacío = autodetectar.
-    'app_url'       => 'https://quiz.fourmartech.es',
-    // Enlaces cortos: https://quiz.fourmartech.es/Xk3mP9qa2B (requiere mod_rewrite, ver .htaccess)
+    // Public URL of the app, without trailing slash (e.g. https://surveys.example.com). Empty = auto-detect.
+    'app_url'       => '',
+    // Short links: https://surveys.example.com/Xk3mP9qa2B (requires mod_rewrite, see .htaccess)
     'pretty_urls'   => true,
-    'app_name'      => 'Encuestas',
-    // Cadena larga y aleatoria. Se usa para anonimizar IPs (hash).
+    'app_name'      => 'Encuestas',   // shown in the panel (translated to "Surveys" in English)
+    // Long random string, used to hash (anonymise) IP addresses.
     'secret'        => 'CAMBIA-ESTO-POR-UNA-CADENA-LARGA-Y-ALEATORIA',
     'upload_max_mb' => 50,
     'timezone'      => 'Europe/Madrid',

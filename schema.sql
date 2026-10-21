@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(120) NOT NULL,
   email VARCHAR(190) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  lang VARCHAR(5) NOT NULL DEFAULT 'es',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS responses (
   token CHAR(32) NOT NULL,
   ip_hash CHAR(64) NULL,
   user_agent VARCHAR(255) NULL,
+  lang VARCHAR(5) NULL,
   duration_sec INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_responses_token (token),

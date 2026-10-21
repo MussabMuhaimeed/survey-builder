@@ -1,4 +1,4 @@
-/* Utilidades comunes del panel de administración */
+/* Shared admin panel utilities. Requires i18n.js */
 (function () {
   'use strict';
   const App = (window.App = window.App || {});
@@ -17,7 +17,7 @@
       keepalive: !!opts.keepalive,
     });
     let json = {};
-    try { json = await res.json(); } catch (e) { json = { ok: false, error: 'Respuesta inesperada del servidor (' + res.status + ')' }; }
+    try { json = await res.json(); } catch (e) { json = { ok: false, error: _t('Respuesta inesperada del servidor ({status})', { status: res.status }) }; }
     if (!res.ok || !json.ok) {
       const err = new Error(json.error || 'Error ' + res.status);
       err.status = res.status;
@@ -29,7 +29,7 @@
   App.upload = async function (file) {
     const fd = new FormData();
     fd.append('file', file);
-    const t = App.toast('Subiendo ' + file.name + '…', 'info', 0);
+    const t = App.toast(_t('Subiendo {name}…', { name: file.name }), 'info', 0);
     try {
       const r = await App.api('upload', fd);
       t.remove();
@@ -65,7 +65,7 @@
     return el;
   };
 
-  /* ---------- modales ---------- */
+  /* ---------- modals ---------- */
   App.openModal = function (id) {
     const m = typeof id === 'string' ? document.getElementById(id) : id;
     if (!m) return;
@@ -88,10 +88,10 @@
       m.innerHTML = `<div class="modal-backdrop"></div><div class="modal-dialog modal-sm">
         <div class="modal-body center"><div class="confirm-icon ${opts.danger ? 'danger' : ''}"><i class="ti ${opts.icon || (opts.danger ? 'ti-alert-triangle' : 'ti-help')}"></i></div>
         <h2></h2><p class="muted"></p></div>
-        <div class="modal-foot"><button class="btn btn-ghost" data-r="0">Cancelar</button><button class="btn ${opts.danger ? 'btn-danger' : 'btn-primary'}" data-r="1"></button></div></div>`;
-      m.querySelector('h2').textContent = opts.title || '¿Seguro?';
+        <div class="modal-foot"><button class="btn btn-ghost" data-r="0">${_t('Cancelar')}</button><button class="btn ${opts.danger ? 'btn-danger' : 'btn-primary'}" data-r="1"></button></div></div>`;
+      m.querySelector('h2').textContent = opts.title || _t('¿Seguro?');
       m.querySelector('p').textContent = opts.text || '';
-      m.querySelector('[data-r="1"]').textContent = opts.ok || 'Aceptar';
+      m.querySelector('[data-r="1"]').textContent = opts.ok || _t('Aceptar');
       const done = (v) => { m.remove(); document.removeEventListener('keydown', onKey); resolve(v); };
       const onKey = (e) => { if (e.key === 'Escape') done(false); if (e.key === 'Enter') done(true); };
       m.addEventListener('click', (e) => {
@@ -116,7 +116,7 @@
       document.execCommand('copy');
       ta.remove();
     }
-    App.toast('Copiado al portapapeles');
+    App.toast(_t('Copiado al portapapeles'));
   };
 
   /* ---------- QR ---------- */
@@ -126,7 +126,7 @@
     qr.make();
     return qr;
   }
-  /** Canvas con el QR. opts: { size, fg, bg, margin (módulos) } */
+  /** QR code as a canvas. opts: { size, fg, bg, margin (modules) } */
   App.qrCanvas = function (text, opts) {
     opts = Object.assign({ size: 512, fg: '#111111', bg: '#ffffff', margin: 2 }, opts);
     const qr = qrMatrix(text);
@@ -146,7 +146,7 @@
     }
     return c;
   };
-  /** SVG vectorial del QR (ideal para imprenta) */
+  /** Vector SVG QR code (best for print) */
   App.qrSvg = function (text, opts) {
     opts = Object.assign({ fg: '#111111', bg: '#ffffff', margin: 2 }, opts);
     const qr = qrMatrix(text);
@@ -168,7 +168,7 @@
     a.click();
     a.remove();
   };
-  App.slug = (s) => String(s || 'encuesta').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'encuesta';
+  App.slug = (s) => String(s || 'survey').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'survey';
   App.downloadQr = function (text, format, name, opts) {
     const base = 'qr-' + App.slug(name);
     if (format === 'svg') {
@@ -180,27 +180,39 @@
     }
   };
 
-  /* ---------- compartir ---------- */
+  /* ---------- sharing ---------- */
   App.shareCtx = null;
-  App.share = function (url, status, id, title) {
+  const withLang = (url, lang) => (lang ? url + (url.includes('?') ? '&' : '?') + 'lang=' + lang : url);
+  function paintShare() {
     const m = document.getElementById('modal-share');
-    if (!m) return;
-    App.shareCtx = { url, id, title };
+    const c = App.shareCtx;
+    const url = withLang(c.url, c.lang);
     m.querySelector('#share-url').value = url;
     m.querySelector('#share-open').href = url;
-    m.querySelector('#share-embed').value = `<iframe src="${url}" width="100%" height="720" style="border:0;border-radius:16px" loading="lazy" title="Encuesta"></iframe>`;
-    m.querySelector('#share-draft-warn').classList.toggle('hidden', status === 'published');
+    m.querySelector('#share-embed').value = `<iframe src="${url}" width="100%" height="720" style="border:0;border-radius:16px" loading="lazy" title="${_t('Encuesta')}"></iframe>`;
     const poster = m.querySelector('#share-poster');
-    poster.href = id ? App.url('admin/qr.php?id=' + id) : '#';
-    poster.classList.toggle('hidden', !id);
+    poster.href = c.id ? App.url('admin/qr.php?id=' + c.id + (c.lang ? '&lang=' + c.lang : '')) : '#';
+    poster.classList.toggle('hidden', !c.id);
     const box = m.querySelector('#share-qr');
     box.innerHTML = '';
     if (window.qrcode) box.append(App.qrCanvas(url, { size: 336 }));
-    else box.innerHTML = '<span class="muted small">QR no disponible</span>';
+    else box.innerHTML = '<span class="muted small">' + _t('QR no disponible') + '</span>';
+    m.querySelectorAll('#share-lang button').forEach((b) => b.classList.toggle('active', b.dataset.lang === (c.lang || '')));
+  }
+  /** langs: survey languages (e.g. "es,en"); the language picker only shows for bilingual surveys */
+  App.share = function (url, status, id, title, langs) {
+    const m = document.getElementById('modal-share');
+    if (!m) return;
+    const list = String(langs || '').split(',').filter(Boolean);
+    App.shareCtx = { url, id, title, lang: '' };
+    m.querySelector('#share-draft-warn').classList.toggle('hidden', status === 'published');
+    m.querySelector('#share-lang-field').classList.toggle('hidden', list.length < 2);
+    paintShare();
     App.openModal(m);
   };
+  App.shareUrl = () => (App.shareCtx ? withLang(App.shareCtx.url, App.shareCtx.lang) : '');
 
-  /* ---------- delegación global ---------- */
+  /* ---------- global delegation ---------- */
   document.addEventListener('click', (e) => {
     const open = e.target.closest('[data-open]');
     if (open) { e.preventDefault(); App.openModal(open.dataset.open); return; }
@@ -209,9 +221,17 @@
     const copy = e.target.closest('[data-copy]');
     if (copy) { const src = document.querySelector(copy.dataset.copy); App.copy(src.value || src.textContent); return; }
     const share = e.target.closest('[data-share]');
-    if (share) { App.share(share.dataset.share, share.dataset.status, share.dataset.id, share.dataset.title); return; }
+    if (share) { App.share(share.dataset.share, share.dataset.status, share.dataset.id, share.dataset.title, share.dataset.langs); return; }
     const qrDl = e.target.closest('[data-qr-download]');
-    if (qrDl && App.shareCtx) { App.downloadQr(App.shareCtx.url, qrDl.dataset.qrDownload, App.shareCtx.title); return; }
+    if (qrDl && App.shareCtx) { App.downloadQr(App.shareUrl(), qrDl.dataset.qrDownload, App.shareCtx.title + (App.shareCtx.lang ? '-' + App.shareCtx.lang : '')); return; }
+    const shareLang = e.target.closest('#share-lang [data-lang]');
+    if (shareLang && App.shareCtx) { App.shareCtx.lang = shareLang.dataset.lang; paintShare(); return; }
+    const uiLang = e.target.closest('[data-ui-lang]');
+    if (uiLang) {
+      if (uiLang.classList.contains('active')) return;
+      App.api('set_lang', { lang: uiLang.dataset.uiLang }).then(() => location.reload()).catch((err) => App.toast(err.message, 'error'));
+      return;
+    }
 
     const dd = e.target.closest('[data-dropdown]');
     document.querySelectorAll('.dropdown.open').forEach((d) => { if (!dd || d !== dd.parentElement) d.classList.remove('open'); });
