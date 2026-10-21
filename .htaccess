@@ -4,22 +4,26 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # Forzar HTTPS (necesario para la cookie de "una respuesta por persona" en iframes)
+  # Force HTTPS (needed for the one-response-per-browser cookie inside iframes)
   RewriteCond %{HTTPS} !=on
   RewriteCond %{HTTP:X-Forwarded-Proto} !=https
   RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:\d+)?$ [NC]
   RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-  # Enlaces cortos: /Xk3mP9qa2B  ->  s.php?id=Xk3mP9qa2B
+  # Short links: /Xk3mP9qa2B  ->  s.php?id=Xk3mP9qa2B
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^([A-Za-z0-9]{10})/?$ s.php?id=$1 [QSA,L]
 </IfModule>
 
-# Archivos que nunca deben servirse directamente
-<FilesMatch "^(config\.php|config\.sample\.php|schema\.sql|README\.md)$">
+# Files that must never be served directly
+<FilesMatch "^(config\.php|config\.sample\.php|schema\.sql|README(\.es)?\.md|\.git.*|\.schema-version)$">
   Require all denied
 </FilesMatch>
+# Git metadata (if the app was deployed with git clone)
+<IfModule mod_alias.c>
+  RedirectMatch 404 /\.git(/|$)
+</IfModule>
 
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
